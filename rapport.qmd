@@ -1,0 +1,98 @@
+---
+title: "Projet STA201 - Analyse multivariée approfondie"
+author:
+  - "ASSAL"
+  - "TRAORE"
+date: "2026"
+
+format:
+  pdf:
+    documentclass: article
+    pdf-engine: "C:/Users/hassal/AppData/Local/Programs/MiKTeX/miktex/bin/x64/xelatex.exe"
+    toc: true
+    number-sections: true
+    colorlinks: true
+
+# format:
+#   html:
+#     toc: true
+#     number-sections: true    
+
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+# Présentation de la problématique et de la base de données
+
+Notre étude s’appuie sur la base de données *Hotel Booking Demand Datasets*, construite afin d’analyser le comportement d’annulation des réservations dans le secteur hôtelier. Cette base a notamment été diffusée sur Kaggle et documentée dans un article scientifique publié dans la revue *Data in Brief* : [Hotel Booking Demand Datasets](https://www.sciencedirect.com/science/article/pii/S2352340918315191).
+
+La base regroupe les informations de réservation de deux établissements hôteliers situés au Portugal : un hôtel de type *Resort Hotel* et un hôtel de type *City Hotel*. Les deux sous-bases présentent une structure identique composée de 31 variables. Elles contiennent respectivement 40 060 réservations pour le *Resort Hotel* et 79 330 réservations pour le *City Hotel*.
+
+Chaque observation correspond à une réservation hôtelière, qu’elle ait donné lieu à un séjour effectif ou à une annulation. La variable d’intérêt de notre étude est donc la variable indicatrice d’annulation, notée `is_canceled`, qui prend la valeur 1 lorsque la réservation a été annulée et 0 sinon.
+
+L’objectif de cette étude est d’identifier les profils de clients présentant un risque élevé d’annulation. Une meilleure compréhension de ces profils permettrait au management hôtelier de mettre en place des actions ciblées, telles que des relances, une adaptation des conditions de réservation ou une stratégie de surbooking maîtrisée.
+
+La base de données ne contient pas de valeurs manquantes. Toutefois, certaines variables catégorielles, peuvent prendre la valeur « NULL ». Cette valeur ne correspond pas à une donnée absente, mais indique simplement que l’information n’est pas applicable. Par exemple, une valeur « NULL » pour la variable Agent signifie que la réservation n’a pas été effectuée via une agence de voyage et que l'observation n'est pas concernée.
+
+## Présentation des variables importantes à l'étude
+
+```{r}
+source("scripts/packages.R")
+source("scripts/import.R")
+#| label: tbl-dico
+#| tbl-cap: "Description des principales variables de la base de données"
+
+knitr::kable(
+  dico_variables,
+  format = "latex",
+  booktabs = TRUE,
+  longtable = TRUE
+)
+```
+
+Le Tableau @tbl-dico présente les principales variables retenues pour l’analyse.
+
+## Description des données et statistiques descriptives
+
+# Préparation des données
+
+Avant d'entamer la phase d'analyse des premiéres statistiques descriptives une revue rigouse de cohérence des données s'impose. Nous avons ainsi revérifier l'absence de données manquantes et la cohérence métier d'absence de variable. Dans une deusiéme étape nous avons aussi vérifier l'existence de valeurs abérantes pouvant affecter les résultats de notre modélisation *mettre ici des exemples et des details de gestions de données abérantes même si sur notre base il y en avait pas beaucoup* *on parle de notre data engenering à cette etape?*
+
+# Analyse statistiques univariés
+
+Notre variable d'intérêt étant "is_canceled" sa distribution se présente ainsi:
+
+```{r}
+source(("scripts/stat_desc.R"))
+```
+```{r}
+#| label: fig-target
+#| fig-cap: "Répartition des annulations de réservations"
+p_target
+```
+
+
+L'histogramme @fig-target présente la répartition des réservations annulées et non annulées.
+
+*ajouter les stats univariés d'autres variables *
+
+*ou alors c'est juste ici aprés avoir présenté les variable global, évoqué le sujet du trop de modalités et expliquer notre* *demarche de data engenering et directement par la suite dans les stats bivariés parler des nouvelles variables créer comme *
+*ça on evite de les perdre dans trop de details et des analyses qui ne seront pas utilisés par la suite*
+
+37% des reservations sont annulées, ce qui reste un niveau élévé d'ou l'importance de ce type d'étude et qui nous donne une base relativement équilibré entre les deux modalités.
+
+## Analyse statistique bivariés
+Dans la revue de littérature sur des comportements similaires (annulation dans le secteur aéronautique ou autre), quelques variables expliquant ce comportement ont retenu notre attention, notamment parce qu’elles sont présentes dans notre base de données.
+Il s’agit du lead time, des demandes spéciales, des clients ayant déjà annulé, ainsi que des longs séjours.
+
+Voici un panorama de leurs statistiques bivariées avec notre variable d’intérêt.
+
+
+```{r}
+#| label: fig-leadtime
+#| fig-cap: "Fonction de densité du délai entre la date reservation et l'arrivée"
+res_lead$density
+```
+La comparaison des fonctions de densités @fig-leadtime
