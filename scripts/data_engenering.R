@@ -1,10 +1,34 @@
 #########################################################"
 #####################################################
 ####### construction des variables de l'etude
+df_cleaning_flags <- df |>
+  mutate(
+    children = replace_na(children, 0),
+    total_guests = adults + children + babies,
+    total_nights = stays_in_week_nights + stays_in_weekend_nights,
+    cleaning_reason = case_when(
+      total_guests == 0 ~ "Aucun client renseigne",
+      total_nights == 0 ~ "Sejour de 0 nuit",
+      adr < 0 ~ "ADR negatif",
+      adr > 1000 ~ "ADR extreme superieur a 1000",
+      TRUE ~ "Conserve"
+    )
+  )
+
+table_cleaning_recap <- df_cleaning_flags |>
+  count(cleaning_reason, name = "Effectif") |>
+  mutate(
+    Pourcentage = scales::percent(Effectif / sum(Effectif), accuracy = 0.01),
+    Decision = if_else(cleaning_reason == "Conserve", "Conserve", "Exclu")
+  ) |>
+  arrange(desc(Decision), cleaning_reason)
+
+df_cleaned <- df_cleaning_flags |>
+  filter(cleaning_reason == "Conserve") |>
+  select(-cleaning_reason)
 
 
-
-df_engineered <- df |>
+df_engineered <- df_cleaned |>
   mutate(
     # 0. Cible
     is_canceled = factor(
@@ -80,6 +104,33 @@ df_engineered <- df |>
       "Oui",
       "Non"
     ),
+    # 9. Localisation de l'indentité 
+    continent = as.factor(replace_na(
+      as.character(countrycode(
+        country,
+        origin       = "iso3c",
+        destination  = "continent",
+        custom_match = c(
+          "TMP" = "Asia",       # Timor oriental (ancien code)
+          "ANT" = "Americas",   # Antilles néerlandaises (ancien code)
+          "KSV" = "Europe",     # Kosovo (non reconnu ISO)
+          "ZAR" = "Africa",     # Zaïre (ancien code RDC)
+          "ROM" = "Europe",     # Roumanie (ancien code)
+          "CN" = "Asia",        # Chine (code raccourci observe dans la base)
+          "ATF" = "Antarctica", # Terres australes et antarctiques francaises
+          "UMI" = "Oceania",    # Iles mineures eloignees des Etats-Unis
+          "NULL" = NA_character_
+        )
+      )),
+      "Unknown"
+    )),
+    
+    identity_location = as.factor(case_when(
+      country   == "PRT"    ~ "Local_Portugal",
+      continent == "Europe" ~ "Europe_hors_PRT",
+      # continent == "Unknown"~ "Unknown",
+      TRUE                  ~ "Other_International"
+    )),
   ) |>
   mutate(
     lead_time_cat = factor(

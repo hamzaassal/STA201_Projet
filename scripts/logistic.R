@@ -1,4 +1,3 @@
-library(rsample)
 
 df_model <- df_engineered |>
   select(
@@ -16,7 +15,8 @@ df_model <- df_engineered |>
     engagement_cat,
     previous_cancellations_cat,
     saison_tourisme,
-    # repeated_guest_cat
+    # repeated_guest_cat,
+    identity_location
   ) |>
   drop_na()
 #######segmentation de la table
@@ -39,11 +39,11 @@ split2 <- initial_split(
 )
 
 test <- training(split2)
-TEST <- testing(split2)
+validation <- testing(split2)
 
 dim(train)
 dim(test)
-dim(TEST)
+dim(validation)
 
 ###construction des modéles logistiques:
 full_model <- glm(
@@ -125,7 +125,7 @@ prob_TEST <- predict(
 # Seuil classique = 0.5
 
 pred_TEST <- if_else(
-  prob_TEST >= 0.5,
+  prob_TEST >= 0.4,
   "Oui",
   "Non"
 )
@@ -146,7 +146,172 @@ conf_mat <- confusionMatrix(
 )
 
 conf_mat
+# ============================================================
+# optimisation
+# ============================================================
+evaluate_threshold <- function(threshold, probs, truth) {
+  pred <- if_else(probs >= threshold, "Oui", "Non") |>
+    factor(levels = c("Non", "Oui"))
+  
+  cm <- confusionMatrix(
+    pred,
+    truth,
+    positive = "Oui"
+  )
+  
+  precision <- as.numeric(cm$byClass["Pos Pred Value"])
+  recall <- as.numeric(cm$byClass["Sensitivity"])
+  specificity <- as.numeric(cm$byClass["Specificity"])
+  f1 <- 2 * precision * recall / (precision + recall)
+  
+  tibble(
+    threshold = threshold,
+    accuracy = as.numeric(cm$overall["Accuracy"]),
+    sensitivity = recall,
+    specificity = specificity,
+    precision = precision,
+    f1_score = f1,
+    balanced_accuracy = mean(c(recall, specificity), na.rm = TRUE),
+    gap_sens_spec = abs(recall - specificity)
+  )
+}
 
+
+choose_threshold <- function(model, valid_data) {
+  probs <- predict(model, newdata = valid_data, type = "response")
+  truth <- valid_data$is_canceled
+  
+  threshold_results <- map_dfr(
+    seq(0.10, 0.90, by = 0.01),
+    evaluate_threshold,
+    probs = probs,
+    truth = truth
+  )
+  
+  list(
+    all = threshold_results,
+    best_balanced = threshold_results |>
+      arrange(desc(balanced_accuracy), gap_sens_spec) |>
+      slice(1),
+    best_f1 = threshold_results |>
+      arrange(desc(f1_score), desc(sensitivity)) |>
+      slice(1),
+    best_recall_precision = threshold_results |>
+      filter(precision >= 0.50) |>
+      arrange(desc(sensitivity), desc(f1_score)) |>
+      slice(1)
+  )
+}
+
+threshold <- choose_threshold(
+  model_stepwise,
+  # splits_sans_deposit$validation
+  validation
+)
+
+threshold_table= as.data.frame(threshold)
+
+evaluate_model <- function(model, test_data, threshold, scenario) {
+  probs <- predict(model, newdata = test_data, type = "response")
+  truth <- test_data$is_canceled
+  
+  pred <- if_else(probs >= threshold, "Oui", "Non") |>
+    factor(levels = c("Non", "Oui"))
+  
+  cm <- confusionMatrix(
+    pred,
+    truth,
+    positive = "Oui"
+  )
+  
+  roc_obj <- roc(
+    response = truth,
+    predictor = probs,
+    levels = c("Non", "Oui"),
+    quiet = TRUE
+  )
+  
+  precision <- as.numeric(cm$byClass["Pos Pred Value"])
+  recall <- as.numeric(cm$byClass["Sensitivity"])
+  specificity <- as.numeric(cm$byClass["Specificity"])
+  
+  list(
+    confusion = cm,
+    roc = roc_obj,
+    probabilities = probs,
+    predictions = pred,
+    metrics = tibble(
+      scenario = scenario,
+      threshold = threshold,
+      accuracy = as.numeric(cm$overall["Accuracy"]),
+      auc = as.numeric(auc(roc_obj)),
+      sensitivity_recall = recall,
+      specificity = specificity,
+      precision = precision,
+      f1_score = 2 * precision * recall / (precision + recall),
+      balanced_accuracy = mean(c(recall, specificity), na.rm = TRUE)
+    )
+  )
+}
+
+eval_balanced <- evaluate_model(
+  model_stepwise,
+  # splits_sans_deposit$test,
+  test,
+  threshold$best_balanced$threshold,
+  "type_seuil_equilibre"
+)
+
+eval_f1 <- evaluate_model(
+  model_stepwise,
+  test,
+  threshold$best_f1$threshold,
+  "type_seuil_f1"
+)
+
+
+comparison_metrics <- bind_rows(
+  eval_balanced$metrics,
+  eval_f1$metrics,
+  
+)
+
+plot_threshold_main <- threshold$all |>
+  select(
+    threshold,
+    accuracy,
+    sensitivity,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  ) |>
+  pivot_longer(
+    -threshold,
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  ggplot(aes(x = threshold, y = value, color = metric)) +
+  geom_line(linewidth = 1) +
+  geom_vline(
+    xintercept = threshold$best_balanced$threshold,
+    linetype = "dashed",
+    color = "black"
+  ) +
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    title = "Evolution des metriques selon le seuil",
+    subtitle = "Modele principal",
+    x = "Seuil de classification",
+    y = "Valeur",
+    color = "Metrique"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom")
+
+
+
+plot_threshold_main
 # ============================================================
 # 4. METRIQUES PRINCIPALES
 # ============================================================
@@ -331,8 +496,8 @@ fourfoldplot(
   conf_mat$table,
   
   color = c(
-    "#2C7FB8",
-    "#D95F0E"
+    "#ff2c2c",
+    "#008000"
   ),
   
   conf.level = 0,

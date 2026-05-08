@@ -6,6 +6,7 @@ library(forcats)
 library(ggplot2)
 library(corrplot)
  library(kableExtra)
+library(rsample)
 
 
 library(scales)
@@ -20,4 +21,4 @@ library(FactoMineR)
 library(factoextra)
 
 library(knitr)
-
+library(countrycode)

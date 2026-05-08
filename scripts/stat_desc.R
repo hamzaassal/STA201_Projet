@@ -47,7 +47,8 @@ df_desc <- df_engineered |>
     engagement_cat,
     previous_cancellations_cat,
     saison_tourisme,
-    repeated_guest_cat
+    repeated_guest_cat,
+    identity_location
   ) |>
   drop_na()
 
@@ -86,27 +87,105 @@ plot_univariate <- function(data, var_name, title_label = NULL) {
     theme_report
 }
 
+# plot_bivariate <- function(data, var_name, title_label = NULL) {
+#   if (is.null(title_label)) {
+#     title_label <- str_replace_all(var_name, "_", " ")
+#   }
+#   
+#   data |>
+#     count(variable = .data[[var_name]], is_canceled) |>
+#     group_by(variable) |>
+#     mutate(prop = n / sum(n)) |>
+#     ungroup() |>
+#     ggplot(
+#       aes(
+#         x = reorder(as.character(variable), prop),
+#         y = prop,
+#         fill = is_canceled
+#       )
+#     ) +
+#     geom_col(position = "fill", width = 0.68, alpha = 0.95) +
+#     coord_flip() +
+#     scale_fill_manual(values = c("Non" = "#1F77B4", "Oui" = "#E76F51")) +
+#     scale_y_continuous(labels = percent_format()) +
+#     labs(
+#       title = title_label,
+#       subtitle = "Répartition annulé / non annulé",
+#       x = NULL,
+#       y = "Proportion",
+#       fill = "Annulation"
+#     ) +
+#     theme_report
+# }
 plot_bivariate <- function(data, var_name, title_label = NULL) {
   if (is.null(title_label)) {
     title_label <- str_replace_all(var_name, "_", " ")
   }
   
-  data |>
+  plot_data <- data |>
     count(variable = .data[[var_name]], is_canceled) |>
     group_by(variable) |>
-    mutate(prop = n / sum(n)) |>
-    ungroup() |>
+    mutate(
+      prop = n / sum(n),
+      label = percent(prop, accuracy = 0.1)
+    ) |>
+    ungroup()
+  
+  total_data <- plot_data |>
+    group_by(variable) |>
+    summarise(total_n = sum(n), .groups = "drop") |>
+    mutate(
+      total_prop = total_n / sum(total_n),
+      total_label = paste0(percent(total_prop, accuracy = 0.1), " du total")
+    )
+  
+  variable_levels <- total_data |>
+    arrange(total_prop) |>
+    pull(variable) |>
+    as.character()
+  
+  plot_data <- plot_data |>
+    mutate(variable_ordered = factor(as.character(variable), levels = variable_levels))
+  
+  total_data <- total_data |>
+    mutate(variable_ordered = factor(as.character(variable), levels = variable_levels))
+  
+  plot_data |>
     ggplot(
       aes(
-        x = reorder(as.character(variable), prop),
+        x = variable_ordered,
         y = prop,
         fill = is_canceled
       )
     ) +
     geom_col(position = "fill", width = 0.68, alpha = 0.95) +
+    geom_text(
+      aes(label = label),
+      position = position_fill(vjust = 0.5),
+      size = 3.4,
+      fontface = "bold",
+      color = "white"
+    ) +
+    geom_text(
+      data = total_data,
+      aes(
+        x = variable_ordered,
+        y = 1.03,
+        label = total_label
+      ),
+      inherit.aes = FALSE,
+      hjust = 0,
+      size = 3.2,
+      fontface = "bold",
+      color = "grey20"
+    ) +
     coord_flip() +
     scale_fill_manual(values = c("Non" = "#1F77B4", "Oui" = "#E76F51")) +
-    scale_y_continuous(labels = percent_format()) +
+    scale_y_continuous(
+      labels = percent_format(),
+      limits = c(0, 1.18),
+      expand = expansion(mult = c(0, 0.02))
+    ) +
     labs(
       title = title_label,
       subtitle = "Répartition annulé / non annulé",
@@ -208,8 +287,8 @@ p9 <- plot_univariate(df_desc, "has_children", "Présence d'enfants")
 p10 <- plot_univariate(df_desc, "parking_reserved", "Parking réservé")
 p11 <- plot_univariate(df_desc, "engagement_cat", "Engagement client")
 p12 <- plot_univariate(df_desc, "previous_cancellations_cat", "Historique d'annulation")
-
-# Bloc univarié                  
+p13  <- plot_univariate(df_desc,  "identity_location")
+p# Bloc univarié                  
 final_univariate_plot <-
   (p1 | p2) /
   (p3 | p4) /
@@ -272,6 +351,7 @@ b9 <- plot_bivariate(df_desc, "has_children", "Présence d'enfants")
 b10 <- plot_bivariate(df_desc, "parking_reserved", "Parking réservé")
 b11 <- plot_bivariate(df_desc, "engagement_cat", "Engagement client")
 b12 <- plot_bivariate(df_desc, "previous_cancellations_cat", "Historique d'annulation")
+b13 =plot_bivariate(df_desc,"identity_location")
 
 final_bivariate_plot <-
   (b1 | b2) /
@@ -378,7 +458,8 @@ vars_corr <- df_engineered |>
     engagement_cat,
     previous_cancellations_cat,
     saison_tourisme,
-    repeated_guest_cat
+    repeated_guest_cat,
+    identity_location
   )
 
 # ============================================================
