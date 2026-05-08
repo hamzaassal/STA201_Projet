@@ -38,7 +38,16 @@ df_engineered <- df_cleaned |>
     ),
     
     # 0. Bloc factor
-    market_segment = factor(market_segment),
+    market_segment = case_when(
+      market_segment == "Direct"         ~ "Direct",
+      market_segment == "Online TA"      ~ "Online_TA",
+      market_segment == "Offline TA/TO"  ~ "Offline_TA",
+      market_segment == "Corporate"      ~ "Corporate",
+      TRUE                              ~ "Other"
+    ) %>% factor(levels = c("Direct", "Online_TA", "Offline_TA",
+                            "Corporate", "Other"))
+  ,
+
     distribution_channel = factor(distribution_channel),
     deposit_type = factor(deposit_type),
     customer_type = factor(customer_type),

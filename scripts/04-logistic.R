@@ -1,21 +1,21 @@
 
 df_model <- df_engineered |>
-  select(
+  dplyr::select (
     is_canceled,
     hotel,
-    # market_segment,
+     market_segment,
     # distribution_channel,
     # deposit_type,
-    # customer_type,
+     customer_type,
     lead_time_cat,
     total_nights_cat,
     adr_cat,
-    # has_children,
+     has_children,
     # parking_reserved,
     engagement_cat,
     previous_cancellations_cat,
     saison_tourisme,
-    # repeated_guest_cat,
+     # repeated_guest_cat,
     identity_location
   ) |>
   drop_na()

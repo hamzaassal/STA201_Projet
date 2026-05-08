@@ -288,7 +288,7 @@ p10 <- plot_univariate(df_desc, "parking_reserved", "Parking réservé")
 p11 <- plot_univariate(df_desc, "engagement_cat", "Engagement client")
 p12 <- plot_univariate(df_desc, "previous_cancellations_cat", "Historique d'annulation")
 p13  <- plot_univariate(df_desc,  "identity_location")
-p# Bloc univarié                  
+                 
 final_univariate_plot <-
   (p1 | p2) /
   (p3 | p4) /
