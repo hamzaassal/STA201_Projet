@@ -1,10 +1,8 @@
+df <- read.csv("data/hotel_bookings.csv")
 
-
-
-
-df=read.csv("data/hotel_bookings.csv")
-
-# Dictionnaire des variables retenues pour le rapport
+# Dictionnaire des variables initiales de la base.
+# La colonne Choix indique si la variable est retenue directement ou comme
+# source d'une variable construite pour l'analyse et la modelisation.
 dico_variables <- data.frame(
   "Nom de la variable" = c(
     "hotel",
@@ -12,6 +10,8 @@ dico_variables <- data.frame(
     "lead_time",
     "arrival_date_year",
     "arrival_date_month",
+    "arrival_date_week_number",
+    "arrival_date_day_of_month",
     "stays_in_weekend_nights",
     "stays_in_week_nights",
     "adults",
@@ -20,29 +20,57 @@ dico_variables <- data.frame(
     "meal",
     "country",
     "market_segment",
+    "distribution_channel",
+    "is_repeated_guest",
+    "previous_cancellations",
+    "previous_bookings_not_canceled",
+    "reserved_room_type",
+    "assigned_room_type",
+    "booking_changes",
     "deposit_type",
+    "agent",
+    "company",
+    "days_in_waiting_list",
     "customer_type",
     "adr",
-    "total_of_special_requests"
+    "required_car_parking_spaces",
+    "total_of_special_requests",
+    "reservation_status",
+    "reservation_status_date"
   ),
   "Description" = c(
-    "Type d’hôtel : Resort Hotel ou City Hotel",
-    "Indicateur d’annulation de la réservation : 1 = annulée, 0 = non annulée",
-    "Nombre de jours entre la réservation et la date d’arrivée",
-    "Année d’arrivée prévue",
-    "Mois d’arrivée prévue",
-    "Nombre de nuits de week-end réservées",
-    "Nombre de nuits en semaine réservées",
-    "Nombre d’adultes",
-    "Nombre d’enfants",
-    "Nombre de bébés",
-    "Type de repas réservé",
-    "Pays d’origine du client",
-    "Canal ou segment de marché de la réservation",
-    "Type de dépôt associé à la réservation",
-    "Type de client",
-    "Prix moyen journalier de la réservation",
-    "Nombre de demandes spéciales formulées par le client"
+    "Type d'hotel concerne par la reservation : Resort Hotel ou City Hotel.",
+    "Variable cible indiquant si la reservation a ete annulee : 1 = annulee, 0 = non annulee.",
+    "Nombre de jours entre la date de reservation et la date d'arrivee prevue.",
+    "Annee d'arrivee prevue du client.",
+    "Mois d'arrivee prevue du client.",
+    "Numero de semaine de l'annee correspondant a l'arrivee prevue.",
+    "Jour du mois correspondant a l'arrivee prevue.",
+    "Nombre de nuits de week-end reservees.",
+    "Nombre de nuits en semaine reservees.",
+    "Nombre d'adultes associes a la reservation.",
+    "Nombre d'enfants associes a la reservation.",
+    "Nombre de bebes associes a la reservation.",
+    "Type de repas reserve.",
+    "Pays d'origine du client, code selon la nomenclature pays disponible dans la base.",
+    "Segment de marche ou canal commercial a l'origine de la reservation.",
+    "Canal de distribution utilise pour effectuer la reservation.",
+    "Indique si le client est deja venu auparavant : 1 = oui, 0 = non.",
+    "Nombre d'annulations precedentes effectuees par le client.",
+    "Nombre de reservations precedentes non annulees par le client.",
+    "Type de chambre initialement reserve.",
+    "Type de chambre finalement attribue.",
+    "Nombre de modifications effectuees sur la reservation.",
+    "Type de depot ou garantie associe a la reservation.",
+    "Identifiant de l'agence de voyage ayant effectue la reservation, si applicable.",
+    "Identifiant de l'entreprise associee a la reservation, si applicable.",
+    "Nombre de jours passes sur liste d'attente avant confirmation.",
+    "Type de client : Transient, Contract, Group ou Transient-Party.",
+    "Prix moyen journalier de la reservation.",
+    "Nombre de places de parking demandees par le client.",
+    "Nombre de demandes speciales formulees par le client.",
+    "Statut final de la reservation : annulee, non annulee ou no-show.",
+    "Date du dernier statut de la reservation."
   ),
   "Type" = c(
     "Qualitative",
@@ -55,12 +83,68 @@ dico_variables <- data.frame(
     "Quantitative",
     "Quantitative",
     "Quantitative",
+    "Quantitative",
+    "Quantitative",
     "Qualitative",
     "Qualitative",
     "Qualitative",
     "Qualitative",
     "Qualitative",
     "Quantitative",
-    "Quantitative"
-  )
+    "Quantitative",
+    "Qualitative",
+    "Qualitative",
+    "Quantitative",
+    "Qualitative",
+    "Qualitative",
+    "Qualitative",
+    "Quantitative",
+    "Qualitative",
+    "Quantitative",
+    "Quantitative",
+    "Quantitative",
+    "Qualitative",
+    "Date"
+  ),
+  "Choix" = c(
+    "Retenue",
+    "Retenue",
+    "Retenue",
+    "Non retenue",
+    "Retenue",
+    "Non retenue",
+    "Non retenue",
+    "Retenue",
+    "Retenue",
+    "Retenue",
+    "Retenue",
+    "Retenue",
+    "Non retenue",
+    "Retenue",
+    "Retenue",
+    "Non retenue",
+    "Non retenue",
+    "Retenue",
+    "Non retenue",
+    "Non retenue",
+    "Non retenue",
+    "Retenue",
+    "Non retenue",
+    "Non retenue",
+    "Non retenue",
+    "Non retenue",
+    "Retenue",
+    "Retenue",
+    "Retenue",
+    "Retenue",
+    "Non retenue",
+    "Non retenue"
+  ),
+  check.names = FALSE
 )
+
+dico_variables <- dico_variables[
+  order(dico_variables$Choix != "Retenue", dico_variables[["Nom de la variable"]]),
+]
+
+rownames(dico_variables) <- NULL

@@ -1,12 +1,3 @@
-# ============================================================
-# ANALYSE DESCRIPTIVE COMPLETE - VERSION RAPPORT
-# ============================================================
-
-library(tidyverse)
-library(janitor)
-library(scales)
-library(patchwork)
-library(knitr)
 
 # ============================================================
 # THEME PRO
@@ -339,23 +330,23 @@ table_uni_previous
 # GRAPHIQUES BIVARIES INDIVIDUELS
 # ============================================================
 
-b1 <- plot_bivariate(df_desc, "hotel", "Type d'hôtel")
-b2 <- plot_bivariate(df_desc, "market_segment", "Segment de marché")
-b3 <- plot_bivariate(df_desc, "distribution_channel", "Canal de distribution")
-b4 <- plot_bivariate(df_desc, "deposit_type", "Type de dépôt")
-b5 <- plot_bivariate(df_desc, "customer_type", "Type de client")
-b6 <- plot_bivariate(df_desc, "lead_time_cat", "Délai de réservation")
-b7 <- plot_bivariate(df_desc, "total_nights_cat", "Durée du séjour")
-b8 <- plot_bivariate(df_desc, "adr_cat", "Niveau de prix ADR")
-b9 <- plot_bivariate(df_desc, "has_children", "Présence d'enfants")
-b10 <- plot_bivariate(df_desc, "parking_reserved", "Parking réservé")
-b11 <- plot_bivariate(df_desc, "engagement_cat", "Engagement client")
-b12 <- plot_bivariate(df_desc, "previous_cancellations_cat", "Historique d'annulation")
-b13 =plot_bivariate(df_desc,"identity_location")
+(b1 <- plot_bivariate(df_desc, "hotel", "Type d'hôtel"))
+(b2 <- plot_bivariate(df_desc, "market_segment", "Segment de marché"))
+(b3 <- plot_bivariate(df_desc, "distribution_channel", "Canal de distribution"))
+(b4 <- plot_bivariate(df_desc, "deposit_type", "Type de dépôt"))
+(b5 <- plot_bivariate(df_desc, "customer_type", "Type de client"))
+(b6 <- plot_bivariate(df_desc, "lead_time_cat", "Délai de réservation"))
+(b7 <- plot_bivariate(df_desc, "total_nights_cat", "Durée du séjour"))
+(b8 <- plot_bivariate(df_desc, "adr_cat", "Niveau de prix ADR"))
+(b9 <- plot_bivariate(df_desc, "has_children", "Présence d'enfants"))
+(b10 <- plot_bivariate(df_desc, "parking_reserved", "Parking réservé"))
+(b11 <- plot_bivariate(df_desc, "engagement_cat", "Engagement client"))
+(b12 <- plot_bivariate(df_desc, "previous_cancellations_cat", "Historique d'annulation"))
+(b13 =plot_bivariate(df_desc,"identity_location"))
 
 final_bivariate_plot <-
   (b1 | b2) /
-  (b3 | b4) /
+  (b13 | b4) /
   (b5 | b6) /
   (b7 | b8) /
   (b9 | b10) /

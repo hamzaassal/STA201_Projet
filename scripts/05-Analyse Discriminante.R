@@ -1,19 +1,6 @@
-# ============================================================
-# LIBRAIRIES
-# ============================================================
-library(tidyverse)
-library(janitor)
-library(forcats)
-library(rsample)
-library(FactoMineR)
-library(MASS)
-library(class)
-library(pROC)
-library(caret)
+source("scripts/04-data preparation.R")
 
-# Si besoin :
-# install.packages("biotools")
-library(biotools)
+
 
 # ============================================================
 # 3. HARMONISATION DES NIVEAUX DE FACTEURS
@@ -137,51 +124,7 @@ validation_k <- validation_coord |>
 test_k <- test_coord |>
   dplyr::select(all_of(colnames(test_coord)[1:k]), is_canceled)
 # ============================================================
-# 8. TESTS D'HYPOTHESES POUR LDA / QDA
-# ============================================================
-
-# 8.1 Test de Shapiro-Wilk sur un sous-échantillon
-set.seed(123)
-
-train_sample <- train_k |>
-  dplyr::slice_sample(n = min(5000, nrow(train_k)))
-
-shapiro_results <- purrr::map_dfr(
-  colnames(train_sample |>
-             dplyr::select(-is_canceled)),
-  \(var_name) {
-    test <- shapiro.test(train_sample[[var_name]])
-    
-    tibble(
-      variable = var_name,
-      statistic = unname(test$statistic),
-      p_value = test$p.value
-    )
-  }
-)
-
-shapiro_results
-
-# 8.2 QQ-plots
-par(mfrow = c(2, 3))
-
-for (i in seq_len(ncol(train_k) - 1)) {
-  qqnorm(train_k[[i]], main = colnames(train_k)[i])
-  qqline(train_k[[i]], col = "red")
-}
-
-par(mfrow = c(1, 1))
-
-# 8.3 Test de Box M
-box_m_test <- biotools::boxM(
-  train_k |>
-    dplyr::select(-is_canceled),
-  train_k$is_canceled
-)
-
-box_m_test
-# ============================================================
-# 9. FONCTION D'EVALUATION
+# 8. FONCTION D'EVALUATION
 # ============================================================
 evaluate_model <- function(true, pred, prob_yes) {
   roc_obj <- pROC::roc(
@@ -207,7 +150,7 @@ get_knn_prob_yes <- function(knn_pred) {
   )
 }
 # ============================================================
-# 10. MODELES SUR LES k PREMIERS AXES
+# 9. MODELES SUR LES k PREMIERS AXES
 # ============================================================
 lda_model <- MASS::lda(
   is_canceled ~ .,
@@ -260,7 +203,7 @@ knn_pred_50 <- class::knn(
   use.all = FALSE
 )
 # ============================================================
-# 11. PREDICTIONS SUR VALIDATION
+# 10. PREDICTIONS SUR VALIDATION
 # ============================================================
 lda_pred <- predict(lda_model, newdata = validation_k)
 qda_pred <- predict(qda_model, newdata = validation_k)
@@ -312,7 +255,7 @@ results_validation <- bind_rows(
 
 results_validation
 # ============================================================
-# 12. MATRICES DE CONFUSION SUR VALIDATION
+# 11. MATRICES DE CONFUSION SUR VALIDATION
 # ============================================================
 caret::confusionMatrix(
   lda_pred$class,
@@ -344,7 +287,7 @@ caret::confusionMatrix(
   positive = "Oui"
 )
 # ============================================================
-# 13. COMPARAISON OPTIONNELLE : LDA AVEC TOUS LES AXES
+# 12. COMPARAISON OPTIONNELLE : LDA AVEC TOUS LES AXES
 # ============================================================
 lda_all <- MASS::lda(
   is_canceled ~ .,
@@ -361,54 +304,3 @@ eval_lda_all <- evaluate_model(
 
 eval_lda_all |>
   mutate(model = "LDA_all_axes")
-# ============================================================
-# 14. MODELE FINAL : train + validation
-# ============================================================
-train_full <- bind_rows(train_k, validation_k)
-
-lda_final <- MASS::lda(
-  is_canceled ~ .,
-  data = train_full
-)
-
-lda_test_pred <- predict(lda_final, newdata = test_k)
-
-# Matrice de confusion finale
-table(
-  Predicted = lda_test_pred$class,
-  Actual = test_k$is_canceled
-)
-
-caret::confusionMatrix(
-  lda_test_pred$class,
-  test_k$is_canceled,
-  positive = "Oui"
-)
-
-# AUC finale
-roc_test_lda <- pROC::roc(
-  test_k$is_canceled,
-  lda_test_pred$posterior[, "Oui"],
-  levels = c("Non", "Oui"),
-  direction = "<"
-)
-
-pROC::auc(roc_test_lda)
-
-plot(
-  roc_test_lda,
-  col = "blue",
-  main = "Courbe ROC du modèle LDA sur test"
-)
-
-results_test_lda <- evaluate_model(
-  true = test_k$is_canceled,
-  pred = lda_test_pred$class,
-  prob_yes = lda_test_pred$posterior[, "Oui"]
-) |>
-  mutate(model = "LDA_final_test") |>
-  dplyr::select(model, auc, accuracy)
-
-results_test_lda
-
-

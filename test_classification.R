@@ -2,7 +2,7 @@
 source("scripts/00-packages.R")
 source("scripts/01-import.R")
 source("scripts/02-data_engenering.R")
-source("scripts/04-logistic.R")
+source("scripts/04-data preparation.R")
 
 # Vérifier les objets de base
 cat("✓ df_model existe:", exists("df_model"), "\n")

@@ -7,14 +7,14 @@
 source("scripts/00-packages.R")
 source("scripts/01-import.R")
 source("scripts/02-data_engenering.R")
-source("scripts/04-logistic.R")
+source("scripts/04-data preparation.R")
 
 # ============================================================
 # 1. VERIFICATION DES OBJETS EXISTANTS
 # ============================================================
 
 if (!exists("df_model")) {
-  stop("df_model n'existe pas. Assurez-vous que scripts/04-logistic.R a été exécuté.")
+  stop("df_model n'existe pas. Assurez-vous que scripts/04-data preparation.R a été exécuté.")
 }
 
 if (!exists("train") | !exists("validation") | !exists("test")) {

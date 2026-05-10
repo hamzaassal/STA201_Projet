@@ -1,0 +1,386 @@
+---
+title: "Projet STA201 - Analyse multivariée approfondie"
+author:
+  - "ASSAL"
+  - "TRAORE"
+date: "2026"
+lang: fr-FR
+
+format:
+  pdf:
+    documentclass: article
+    fontsize: 12pt
+    pdf-engine: xelatex
+    geometry:
+      - margin=2cm
+    toc: true
+    number-sections: true
+    colorlinks: true
+    include-in-header:
+      text: |
+        \definecolor{cnamred}{HTML}{C9002B}
+        \renewcommand{\maketitle}{%
+          \begin{titlepage}
+          \thispagestyle{empty}
+          \begin{center}
+          \vspace*{1.4cm}
+          \makebox[\textwidth][c]{\includegraphics[width=0.42\textwidth]{assets/logo-cnam.png}}
+          \vspace{0.8cm}
+          {\Large Conservatoire National des Arts et Métiers\par}
+          \vfill
+          {\Huge\bfseries{} Projet STA201 : Analyse multivariée approfondie \par}
+          \vspace{0.45cm}
+          {\LARGE{} Etude de cas : Annulations de reservations hotelières \par}
+          \vfill
+          \begin{tabular}{rl}
+          Auteurs : & ASSAL HAMZA \\
+                    & TRAORE SAH\\
+          Date : & 17-05-2026 \\
+          \end{tabular}
+          \vspace*{1.4cm}
+          \end{center}
+          \end{titlepage}
+        }
+        \makeatletter
+        \let\oldtableofcontents\tableofcontents
+        \renewcommand{\tableofcontents}{%
+          \oldtableofcontents
+          \thispagestyle{empty}
+        }
+        \makeatother
+
+# format:
+#   html:
+#     toc: true
+#     number-sections: true    
+
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+source("scripts/00-packages.R")
+source("scripts/01-import.R")
+source("scripts/02-data_engenering.R")
+```
+
+\newpage
+
+# Présentation des bases théoriques des deux méthodes
+
+## Régression logistique
+
+La régression logistique est une méthode de classification supervisée utilisée lorsque la variable à expliquer est qualitative, le plus souvent binaire. Elle permet d'estimer la probabilité qu'un individu appartienne à une modalité d'intérêt à partir d'un ensemble de variables explicatives quantitatives ou qualitatives. Lorsque les variables explicatives sont qualitatives, elles sont généralement transformées en variables indicatrices afin d'être intégrées au modèle.
+
+Contrairement à une régression linéaire classique, la régression logistique ne modélise pas directement la variable binaire. Elle modélise le logarithme du rapport des chances, appelé logit. Si l'on note $p_i$ la probabilité que l'individu $i$ appartienne à la classe étudiée, le modèle s'écrit :
+
+$$
+\log\left(\frac{p_i}{1-p_i}\right)
+=
+\beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}
+$$
+
+où $x_{i1}, \ldots, x_{ip}$ représentent les variables explicatives, et $\beta_0, \ldots, \beta_p$ les paramètres du modèle. La transformation logit permet de relier une probabilité comprise entre 0 et 1 à une combinaison linéaire de variables explicatives.
+
+Une fois le modèle estimé, la probabilité prédite s'obtient par la fonction logistique :
+
+$$
+p_i =
+\frac{1}{1 + \exp[-(\beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip})]}
+$$
+
+La décision de classer un individu dans la classe étudiée dépend ensuite d'un seuil de classification. Le seuil de 0,5 est souvent utilisé par défaut, mais il peut être modifié selon l'objectif de l'étude. Lorsque l'on cherche prioritairement à détecter une classe particulière, il est fréquent d'ajuster ce seuil afin d'améliorer la sensibilité, c'est-à-dire la capacité du modèle à repérer correctement les individus appartenant réellement à cette classe.
+
+L'interprétation des coefficients se fait généralement à l'aide des odds ratios. Pour une variable explicative donnée, l'odds ratio correspond à l'exponentielle du coefficient estimé :
+
+$$
+OR_j = \exp(\beta_j)
+$$
+
+Un odds ratio supérieur à 1 indique que la variable augmente les chances d'appartenir à la classe étudiée, toutes choses égales par ailleurs. À l'inverse, un odds ratio inférieur à 1 indique une diminution de ces chances. Cette propriété rend la régression logistique intéressante à la fois pour la prédiction et pour l'interprétation des facteurs associés à une modalité donnée.
+
+L'évaluation du modèle repose sur plusieurs indicateurs issus de la matrice de confusion. L'accuracy mesure la proportion globale de bonnes classifications, mais elle peut être insuffisante lorsque les classes sont déséquilibrées ou lorsque l'on s'intéresse davantage à une classe particulière. La sensibilité, ou recall, mesure la proportion d'individus de la classe d'intérêt correctement détectés. La spécificité mesure la proportion d'individus de l'autre classe correctement reconnus. La précision indique, parmi les individus prédits dans la classe d'intérêt, la proportion qui appartient réellement à cette classe. Le F1-score combine précision et sensibilité, tandis que l'AUC mesure la capacité globale du modèle à séparer les classes indépendamment d'un seuil particulier.
+
+La régression logistique présente plusieurs avantages : elle est relativement simple à mettre en œuvre, interprétable, adaptée à une variable cible binaire et compatible avec des variables explicatives de nature variée. Ses limites tiennent notamment à l'hypothèse d'une relation linéaire entre les variables explicatives et le logit de la probabilité, à la sensibilité aux valeurs extrêmes, à la multicolinéarité et aux situations de séparation quasi parfaite.
+
+## Analyse discriminante sur variables qualitatives
+
+L'analyse discriminante sur variables qualitatives est une approche de classification supervisée adaptée aux situations où les variables explicatives sont principalement qualitatives. Dans une perspective prédictive, elle vise à apprendre une règle permettant d'affecter un nouvel individu à l'un des groupes connus à partir de son profil de modalités. Dans la littérature, cette démarche est souvent désignée par le terme DISQUAL, notamment dans les travaux de Gilbert Saporta.
+
+L'idée générale est de transformer l'information qualitative en une représentation numérique exploitable par une analyse discriminante. Pour cela, les variables qualitatives sont généralement codées sous forme d'un tableau disjonctif complet. Chaque modalité devient une indicatrice prenant la valeur 1 si l'individu possède la modalité, et 0 sinon. Cette transformation permet de représenter chaque individu par le profil des modalités qu'il possède.
+
+À partir de cette représentation, une difficulté apparaît : le tableau disjonctif peut contenir beaucoup de colonnes, parfois corrélées entre elles, surtout lorsque les variables qualitatives ont de nombreuses modalités. Pour rendre la modélisation plus stable, on peut d'abord appliquer une analyse des correspondances multiples (ACM). L'ACM résume l'information qualitative dans un nombre réduit d'axes factoriels continus. Ces axes deviennent alors de nouvelles variables synthétiques qui conservent une partie importante de l'information initiale tout en réduisant la dimension du problème.
+
+La partie discriminante peut ensuite être réalisée à partir de ces axes d'ACM. Deux méthodes classiques peuvent être utilisées : l'analyse discriminante linéaire (LDA) et l'analyse discriminante quadratique (QDA). La LDA suppose que les groupes ont des matrices de variance-covariance identiques ; elle construit donc des frontières de décision linéaires. La QDA relâche cette hypothèse et autorise une matrice de variance-covariance différente pour chaque groupe ; elle peut ainsi construire des frontières de décision plus souples, mais elle demande davantage de données pour être estimée de manière stable.
+
+Dans cette logique, l'analyse discriminante sur variables qualitatives peut être vue comme une chaîne prédictive en deux temps. L'ACM transforme et résume les variables qualitatives, puis la LDA ou la QDA apprend une règle de classification à partir des axes factoriels retenus. La qualité du modèle dépend alors du nombre d'axes conservés, de la séparation réelle entre les groupes et de la stabilité des matrices de covariance estimées.
+
+L'évaluation de la méthode se fait comme pour toute méthode de prédiction supervisée. On applique le modèle à un échantillon de test ou de validation, puis on compare les groupes prédits aux groupes observés. La matrice de confusion permet de calculer l'accuracy, la sensibilité, la spécificité, la précision et le F1-score. Ces indicateurs mesurent la capacité de la méthode à classer correctement les individus et à repérer les groupes d'intérêt.
+
+Cette approche est particulièrement utile lorsque l'analyse porte sur des profils construits à partir de modalités qualitatives. L'étape d'ACM permet aussi de garder une lecture descriptive des modalités qui structurent les axes factoriels, même si l'objectif final est prédictif. Ses limites tiennent notamment à la qualité du codage, au choix du nombre d'axes retenus, à la présence de modalités rares et au risque d'instabilité lorsque certains groupes sont peu représentés. Un regroupement raisonné des modalités peut donc être nécessaire avant l'analyse.
+
+\newpage
+
+# Introduction, problématique et base de données
+
+Notre étude s’appuie sur la base de données *Hotel Booking Demand Datasets*, construite afin d’analyser le comportement d’annulation des réservations dans le secteur hôtelier. Cette base a notamment été diffusée sur Kaggle et documentée dans un article scientifique publié dans la revue *Data in Brief*. Les informations détaillées sur l'origine des données sont précisées dans la section @sec-sources.
+
+La base regroupe les informations de réservation de deux établissements hôteliers situés au Portugal : un hôtel de type *Resort Hotel* et un hôtel de type *City Hotel*. Les deux sous-bases présentent une structure identique composée de 31 variables. Elles contiennent respectivement 40 060 réservations pour le *Resort Hotel* et 79 330 réservations pour le *City Hotel*.
+
+Chaque observation correspond à une réservation hôtelière, qu’elle ait donné lieu à un séjour effectif ou à une annulation. La variable d’intérêt de notre étude est donc la variable indicatrice d’annulation, notée `is_canceled`, qui prend la valeur 1 lorsque la réservation a été annulée et 0 sinon.
+
+L’objectif de cette étude est d’identifier les profils de clients présentant un risque élevé d’annulation. Une meilleure compréhension de ces profils permettrait au management hôtelier de mettre en place des actions ciblées, telles que des relances, une adaptation des conditions de réservation ou une stratégie de surbooking maîtrisée.
+
+La base de données ne contient pas de valeurs manquantes. Toutefois, certaines variables catégorielles, peuvent prendre la valeur « NULL ». Cette valeur ne correspond pas à une donnée absente, mais indique simplement que l’information n’est pas applicable. Par exemple, une valeur « NULL » pour la variable Agent signifie que la réservation n’a pas été effectuée via une agence de voyage et que l'observation n'est pas concernée.
+
+## Présentation des variables importantes à l'étude
+
+Les principales variables utilisées dans l'étude sont décrites en Annexe, dans le Tableau @tbl-dico. Elles couvrent la nature de l'hôtel, la variable cible `is_canceled`, les caractéristiques temporelles de la réservation, la composition du séjour, le canal de réservation, le prix moyen journalier et les demandes particulières du client.
+
+\newpage
+
+# Description des données, prétraitements et statistiques descriptives
+
+La structure générale de la base est résumée en Annexe dans le Tableau @tbl-base-recap. Les variables construites pour l'analyse sont détaillées dans le Tableau @tbl-variables-creees. Les variables retenues pour la modélisation logistique sont présentées dans le Tableau @tbl-variables-modelisation. Ces tableaux sont placés en annexe afin de conserver un corps de rapport plus lisible, conformément à la consigne de ne pas intégrer de listing brut dans le texte principal.
+
+## Nettoyage et cohérence des données
+
+Avant l'analyse statistique et la modélisation, plusieurs contrôles ont été réalisés afin de sécuriser l'utilisation de la base. L'objectif était de conserver l'information disponible tout en traitant les situations susceptibles de produire des incohérences dans les variables construites ou dans les modèles.
+
+La base contient très peu de valeurs manquantes au sens strict de R. Les seules valeurs manquantes identifiées concernent la variable `children`, avec 4 observations. Pour construire la variable `has_children`, ces valeurs ont été assimilées à 0 enfant. Ce choix permet d'éviter la création de valeurs manquantes dans une variable synthétique utilisée ensuite dans les analyses.
+
+Certaines variables de la base utilisent également la modalité `"NULL"`. Dans ce projet, cette modalité n'est pas systématiquement considérée comme une valeur manquante : elle peut traduire une information non applicable. Par exemple, une valeur `"NULL"` pour une agence ou une entreprise peut simplement indiquer que la réservation n'a pas été effectuée par ce canal.
+
+Un contrôle de cohérence a aussi été effectué sur la variable `country`, utilisée pour construire les variables géographiques. Les codes pays non reconnus automatiquement par le package `countrycode` ont été traités explicitement. Les codes `CN`, `ATF` et `UMI` ont été associés à leur continent, tandis que la modalité `"NULL"` a été classée dans la catégorie `Unknown`.
+
+Les observations présentant des incohérences fortes ont ensuite été exclues de la base d'analyse. Il s'agit des réservations sans aucun client renseigné, des séjours de 0 nuit, des valeurs négatives de prix moyen journalier (`adr`) et d'une valeur extrêmement élevée de `adr`. Les doublons exacts ont été repérés mais n'ont pas été supprimés automatiquement, car la base ne contient pas d'identifiant unique de réservation permettant de distinguer avec certitude un doublon technique d'une réservation distincte mais identique sur les variables disponibles.
+
+Enfin, les variables qualitatives utiles à l'analyse ont été converties en facteurs afin de faciliter les statistiques descriptives, l'analyse discriminante sur variables qualitatives et la modélisation logistique.
+
+La synthèse chiffrée de ces contrôles et décisions est présentée en Annexe dans le Tableau @tbl-cleaning-recap.
+
+À l'issue de ces traitements, la base d'analyse contient `r nrow(df_cleaned)` observations. Les variables construites dans la suite du rapport sont donc calculées à partir de cette base d'analyse.
+
+## Préparation des données
+
+La préparation des données consiste ensuite à transformer certaines variables initiales en indicateurs plus directement exploitables pour l'analyse. Plusieurs variables synthétiques ont été construites afin de rendre les résultats plus lisibles, de limiter le nombre de modalités et de disposer de profils interprétables.
+
+Ces variables portent notamment sur le délai de réservation, la durée du séjour, le niveau de prix, la présence d'enfants, l'engagement du client, l'historique d'annulation, la saison touristique et l'origine géographique du client. La variable cible `is_canceled` a également été recodée sous forme factorielle avec les modalités `Non` et `Oui`, ce qui permet une lecture homogène des sorties descriptives et prédictives.
+
+## Analyse statistique univariée
+
+Notre variable d'intérêt étant "is_canceled" sa distribution se présente ainsi:
+
+```{r}
+source("scripts/02-data_engenering.R")
+source(("scripts/03-stat_desc.R"))
+
+p_target <- df_desc |>
+  count(is_canceled) |>
+  mutate(
+    prop = n / sum(n),
+    label = scales::percent(prop, accuracy = 0.1)
+  ) |>
+  ggplot(aes(x = is_canceled, y = n, fill = is_canceled)) +
+  geom_col(width = 0.65, alpha = 0.95) +
+  geom_text(aes(label = label), vjust = -0.35, fontface = "bold") +
+  scale_fill_manual(values = c("Non" = "#1F77B4", "Oui" = "#E76F51")) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Répartition des réservations annulées et non annulées",
+    x = "Annulation",
+    y = "Effectif",
+    fill = "Annulation"
+  ) +
+  theme_report
+
+res_lead <- list(
+  density = df_engineered |>
+    drop_na(lead_time, is_canceled) |>
+    ggplot(aes(x = lead_time, color = is_canceled, fill = is_canceled)) +
+    geom_density(alpha = 0.18, linewidth = 1) +
+    scale_color_manual(values = c("Non" = "#1F77B4", "Oui" = "#E76F51")) +
+    scale_fill_manual(values = c("Non" = "#1F77B4", "Oui" = "#E76F51")) +
+    labs(
+      title = "Distribution du délai de réservation selon l'annulation",
+      x = "Lead time",
+      y = "Densité",
+      color = "Annulation",
+      fill = "Annulation"
+    ) +
+    theme_report
+)
+```
+```{r}
+#| label: fig-target
+#| fig-cap: "Répartition des annulations de réservations"
+p_target
+```
+
+
+L'histogramme @fig-target présente la répartition des réservations annulées et non annulées.
+
+37% des reservations sont annulées, ce qui reste un niveau élévé d'ou l'importance de ce type d'étude et qui nous donne une base relativement équilibré entre les deux modalités.
+
+## Analyse statistique bivariée
+Dans la revue de littérature sur des comportements similaires (annulation dans le secteur aéronautique ou autre), quelques variables expliquant ce comportement ont retenu notre attention, notamment parce qu’elles sont présentes dans notre base de données.
+Il s’agit du lead time, des demandes spéciales, des clients ayant déjà annulé, ainsi que des longs séjours.
+
+Voici un panorama de leurs statistiques bivariées avec notre variable d’intérêt.
+
+
+```{r}
+#| label: fig-leadtime
+#| fig-cap: "Fonction de densité du délai entre la date reservation et l'arrivée"
+res_lead$density
+```
+La comparaison des fonctions de densités @fig-leadtime
+
+\newpage
+
+# Objectif de l'étude et démarche choisie
+
+L'objectif opérationnel du projet est de mieux identifier les réservations susceptibles d'être annulées. La démarche retenue consiste d'abord à construire des variables qualitatives interprétables, puis à mobiliser deux méthodes : la régression logistique, pour estimer une probabilité d'annulation et interpréter l'effet des facteurs explicatifs, et l'analyse discriminante sur variables qualitatives, pour étudier la discrimination entre les profils de réservations annulées et non annulées.
+
+\newpage
+
+# Résultats de la première méthode : régression logistique
+
+Cette partie présentera la construction du modèle logistique, la sélection éventuelle des variables, l'interprétation des coefficients ou odds ratios, puis l'évaluation prédictive du modèle. Comme l'objectif principal est de mieux détecter les annulations, les indicateurs privilégiés seront notamment le recall, la précision, le F1-score et l'AUC, en complément de l'accuracy.
+
+\newpage
+
+# Résultats de la deuxième méthode : analyse discriminante sur variables qualitatives
+
+Cette partie présentera l'application de l'analyse discriminante sur variables qualitatives aux variables retenues. L'analyse devra mettre en évidence les modalités qui contribuent le plus à la séparation entre les réservations annulées et non annulées, ainsi que la qualité de discrimination obtenue.
+
+\newpage
+
+# Comparaison des résultats et conclusion
+
+La comparaison finale confrontera les résultats obtenus avec la régression logistique et avec l'analyse discriminante sur variables qualitatives. Elle devra préciser si les deux méthodes identifient des profils similaires de réservations à risque, discuter leurs avantages respectifs et formuler une conclusion opérationnelle pour le management hôtelier.
+
+\newpage
+
+# Sources des données et références {#sec-sources}
+
+La base utilisée provient du jeu de données *Hotel Booking Demand Datasets*, diffusé sur Kaggle et documenté dans l'article scientifique publié dans *Data in Brief* : [Hotel Booking Demand Datasets](https://www.sciencedirect.com/science/article/pii/S2352340918315191). Les références méthodologiques relatives à la régression logistique et à l'analyse discriminante sur variables qualitatives seront complétées dans cette section.
+
+\newpage
+
+# Annexes
+
+## Tableaux complémentaires
+
+```{r}
+#| label: tbl-dico
+#| tbl-cap: "Description des principales variables de la base de données"
+knitr::kable(
+  dico_variables,
+  format = "latex",
+  booktabs = TRUE,
+  longtable = TRUE,
+  row.names = FALSE,
+  col.names = c("Variable", "Description", "Type", "Choix")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("repeat_header"),
+    full_width = FALSE,
+    font_size = 6
+  ) |>
+  kableExtra::column_spec(1, width = "3.2cm") |>
+  kableExtra::column_spec(2, width = "7.6cm") |>
+  kableExtra::column_spec(3, width = "2.2cm") |>
+  kableExtra::column_spec(4, width = "2.7cm")
+```
+
+```{r}
+#| label: tbl-base-recap
+#| tbl-cap: "Structure générale de la base de données"
+knitr::kable(
+  table_base_recap,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 8
+  ) |>
+  kableExtra::column_spec(1, width = "3.9cm") |>
+  kableExtra::column_spec(2, width = "6.2cm")
+```
+
+```{r}
+#| label: tbl-variables-creees
+#| tbl-cap: "Variables construites pour l'analyse"
+knitr::kable(
+  table_variables_creees,
+  format = "latex",
+  booktabs = TRUE,
+  longtable = TRUE,
+  row.names = FALSE,
+  col.names = c(
+    "Variable",
+    "Variables sources",
+    "Règle de construction",
+    "Rôle dans l'analyse"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("repeat_header"),
+    full_width = FALSE,
+    font_size = 6
+  ) |>
+  kableExtra::column_spec(1, width = "3.4cm") |>
+  kableExtra::column_spec(2, width = "3.8cm") |>
+  kableExtra::column_spec(3, width = "5.4cm") |>
+  kableExtra::column_spec(4, width = "3.8cm")
+```
+
+```{r}
+#| label: tbl-variables-modelisation
+#| tbl-cap: "Variables retenues pour la modélisation logistique"
+knitr::kable(
+  table_variables_modelisation,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  col.names = c("Variable", "Rôle dans l'analyse")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 8
+  ) |>
+  kableExtra::column_spec(1, width = "4.2cm") |>
+  kableExtra::column_spec(2, width = "7.5cm")
+```
+
+```{r}
+#| label: tbl-cleaning-recap
+#| tbl-cap: "Synthèse des contrôles et traitements de cohérence"
+knitr::kable(
+  table_cleaning_recap,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  col.names = c("Critère", "Effectif", "Pourcentage", "Décision")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 8
+  ) |>
+  kableExtra::column_spec(1, width = "5.0cm") |>
+  kableExtra::column_spec(2, width = "2.0cm") |>
+  kableExtra::column_spec(3, width = "2.5cm") |>
+  kableExtra::column_spec(4, width = "2.0cm")
+```
+
+

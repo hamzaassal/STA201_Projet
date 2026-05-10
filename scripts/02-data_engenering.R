@@ -1,3 +1,8 @@
+if (!exists("df") || !exists("dico_variables")) {
+  source("scripts/00-packages.R")
+  source("scripts/01-import.R")
+}
+
 #########################################################"
 #####################################################
 ####### construction des variables de l'etude
@@ -25,7 +30,7 @@ table_cleaning_recap <- df_cleaning_flags |>
 
 df_cleaned <- df_cleaning_flags |>
   filter(cleaning_reason == "Conserve") |>
-  select(-cleaning_reason)
+  dplyr::select(-cleaning_reason)
 
 
 df_engineered <- df_cleaned |>
@@ -86,9 +91,8 @@ df_engineered <- df_cleaned |>
     parking_binary = if_else(parking_reserved == "Oui", 1, 0),
     
     # 6. Engagement client enrichi
-    engagement_raw = total_of_special_requests + booking_changes,
     
-    engagement = engagement_raw + 1 * parking_binary,# ici l'dée d'integrer un poids plus important pour le parking
+    engagement = total_of_special_requests + booking_changes + 1 * parking_binary,# ici l'dée d'integrer un poids plus important pour le parking
     
     engagement_cat = case_when(
       engagement == 0 ~ "faible",
@@ -186,4 +190,174 @@ df_engineered <- df_cleaned |>
     )
   )
 
+
+# ============================================================
+# TABLEAUX RECAPITULATIFS POUR LE RAPPORT
+# ============================================================
+
+missing_by_var <- colSums(is.na(df))
+missing_by_var <- missing_by_var[missing_by_var > 0]
+
+missing_summary <- if (length(missing_by_var) == 0) {
+  "Aucune"
+} else {
+  paste(
+    paste0(names(missing_by_var), " (", missing_by_var, ")"),
+    collapse = " ; "
+  )
+}
+
+table_base_recap <- data.frame(
+  Indicateur = c(
+    "Unite statistique",
+    "Nombre d'observations initiales",
+    "Nombre de variables initiales",
+    "Nombre d'observations exclues au nettoyage",
+    "Nombre d'observations conservees apres nettoyage",
+    "Part de la base conservee",
+    "Nombre de variables apres engineering",
+    "Nombre de reservations City Hotel",
+    "Nombre de reservations Resort Hotel",
+    "Variable cible",
+    "Reservations non annulees - base initiale",
+    "Reservations annulees - base initiale",
+    "Taux d'annulation - base initiale",
+    "Reservations non annulees - base nettoyee",
+    "Reservations annulees - base nettoyee",
+    "Taux d'annulation - base nettoyee",
+    "Valeurs manquantes au sens R",
+    "Variables avec valeurs manquantes"
+  ),
+  Valeur = c(
+    "Une reservation hoteliere",
+    format(nrow(df), big.mark = " ", scientific = FALSE),
+    ncol(df),
+    format(nrow(df) - nrow(df_cleaned), big.mark = " ", scientific = FALSE),
+    format(nrow(df_cleaned), big.mark = " ", scientific = FALSE),
+    scales::percent(nrow(df_cleaned) / nrow(df), accuracy = 0.1),
+    ncol(df_engineered),
+    format(sum(df$hotel == "City Hotel"), big.mark = " ", scientific = FALSE),
+    format(sum(df$hotel == "Resort Hotel"), big.mark = " ", scientific = FALSE),
+    "is_canceled",
+    format(sum(df$is_canceled == 0), big.mark = " ", scientific = FALSE),
+    format(sum(df$is_canceled == 1), big.mark = " ", scientific = FALSE),
+    paste0(round(mean(df$is_canceled == 1) * 100, 1), " %"),
+    format(sum(df_engineered$is_canceled == "Non"), big.mark = " ", scientific = FALSE),
+    format(sum(df_engineered$is_canceled == "Oui"), big.mark = " ", scientific = FALSE),
+    scales::percent(mean(df_engineered$is_canceled == "Oui"), accuracy = 0.1),
+    format(sum(is.na(df)), big.mark = " ", scientific = FALSE),
+    missing_summary
+  ),
+  check.names = FALSE
+)
+
+table_variables_retenues <- dico_variables
+names(table_variables_retenues)[names(table_variables_retenues) == "Nom.de.la.variable"] <- "Variable"
+
+table_variables_creees <- data.frame(
+  Variable = c(
+    "is_canceled",
+    "lead_time_cat",
+    "total_nights",
+    "total_nights_cat",
+    "adr_cat",
+    "has_children",
+    "parking_reserved",
+    "engagement",
+    "engagement_cat",
+    "previous_cancellations_cat",
+    "saison_tourisme",
+    "repeated_guest_cat",
+    "continent",
+    "identity_location"
+  ),
+  Variables_sources = c(
+    "is_canceled",
+    "lead_time",
+    "stays_in_week_nights + stays_in_weekend_nights",
+    "total_nights",
+    "adr",
+    "children + babies",
+    "required_car_parking_spaces",
+    "total_of_special_requests + booking_changes + 1 x parking_binary",
+    "engagement",
+    "previous_cancellations",
+    "arrival_date_month",
+    "is_repeated_guest",
+    "country",
+    "country + continent"
+  ),
+  Regle_de_construction = c(
+    "Recodage de 0/1 en Non/Oui",
+    "0 = derniere_minute ; <= 7 = court ; <= 30 = moyen ; <= 90 = long ; > 90 = tres_long",
+    "Somme des nuits en semaine et de week-end",
+    "<= 2 = court_sejour ; <= 5 = moyen_sejour ; > 5 = long_sejour",
+    "Decoupage de l'ADR en quartiles q1_low, q2_midlow, q3_midhigh, q4_high",
+    "Oui si au moins un enfant ou bebe, Non sinon",
+    "Oui si au moins une place de parking demandee, Non sinon",
+    "Somme des demandes speciales et des changements de reservation et de reservation de place de parking ",
+    "0 = faible ; <= 2 = moyen ; >= 3 = fort",
+    "0 = Non ; >= 1 = Une_ou_plus",
+    "Juillet-aout = pick_saison ; juin-septembre = haute_saison ; avril-mai-octobre = moyenne_saison ; autres mois = basse_saison",
+    "1 = Oui ; 0 = Non",
+    "Conversion du code pays ISO en continent avec countrycode et regroupement des codes non reconnus",
+    "Portugal = Local_Portugal ; Europe hors Portugal = Europe_hors_PRT ; autres origines = Other_International"
+  ),
+  Role_dans_l_analyse = c(
+    "Variable cible a predire",
+    "Mesurer l'anticipation de la reservation",
+    "Mesurer la duree totale du sejour",
+    "Regrouper les durees de sejour",
+    "Comparer les niveaux de prix",
+    "Identifier les reservations familiales",
+    "Mesurer un signe d'engagement du client",
+    "Score enrichi d'engagement",
+    "Comparer les niveaux d'engagement",
+    "Capturer l'historique d'annulation",
+    "Tenir compte de la saison touristique",
+    "Identifier les clients deja venus",
+    "Intermediaire de construction de l'origine geographique",
+    "Resumer l'origine geographique du client pour la modelisation"
+  ),
+  check.names = FALSE
+)
+
+variables_modelisation <- c(
+  "is_canceled",
+  "hotel",
+  "market_segment",
+  "customer_type",
+  "lead_time_cat",
+  "total_nights_cat",
+  "adr_cat",
+  "has_children",
+  "engagement_cat",
+  "previous_cancellations_cat",
+  "saison_tourisme",
+  "identity_location"
+)
+
+table_variables_modelisation <- table_variables_creees[
+  table_variables_creees$Variable %in% variables_modelisation,
+  c("Variable", "Role_dans_l_analyse")
+]
+
+table_variables_modelisation <- rbind(
+  data.frame(
+    Variable = c("hotel", "market_segment", "customer_type"),
+    Role_dans_l_analyse = c(
+      "Distinguer City Hotel et Resort Hotel",
+      "Caracteriser le canal commercial de reservation",
+      "Distinguer les profils de clients selon le type de reservation"
+    ),
+    check.names = FALSE
+  ),
+  table_variables_modelisation
+)
+
+table_variables_modelisation <- table_variables_modelisation[
+  order(match(table_variables_modelisation$Variable, variables_modelisation)),
+]
+
+rownames(table_variables_modelisation) <- NULL
 
