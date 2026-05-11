@@ -25,9 +25,11 @@ packages <- c(
   "broom",
   "caret",
   "pROC",
+  "glmnet",
   "MASS",
   "class",
   "biotools",
+  "MVN",
   "pscl"
 )
 

@@ -19,8 +19,8 @@ source("scripts/05-Analyse Discriminante.R")
 
 set.seed(123)
 
-train_sample <- train_k |>
-  dplyr::slice_sample(n = min(5000, nrow(train_k)))
+train_sample <- train_validation_k_final |>
+  dplyr::slice_sample(n = min(5000, nrow(train_validation_k_final)))
 
 shapiro_results <- purrr::map_dfr(
   colnames(train_sample |> dplyr::select(-is_canceled)),
@@ -36,8 +36,8 @@ shapiro_results <- purrr::map_dfr(
 )
 
 box_m_test <- biotools::boxM(
-  train_k |> dplyr::select(-is_canceled),
-  train_k$is_canceled
+  train_validation_k_final |> dplyr::select(-is_canceled),
+  train_validation_k_final$is_canceled
 )
 
 shapiro_results
@@ -47,46 +47,42 @@ box_m_test
 # 2. EVALUATION FINALE DE LA REGRESSION LOGISTIQUE SUR TEST
 # ============================================================
 
-logit_test_balanced <- evaluate_logit_model(
-  logit_selected_model,
-  test,
-  threshold$best_balanced$threshold,
-  "test_seuil_equilibre"
+logit_test_prob <- predict_logistic_final(
+  model_object = logit_final_model,
+  new_data = logistic_test,
+  newx = if (logit_final_model$type == "penalized") {
+    make_logistic_x(logistic_test, logit_final_model$x_columns)
+  } else {
+    NULL
+  }
 )
 
-logit_test_f1 <- evaluate_logit_model(
-  logit_selected_model,
-  test,
-  threshold$best_f1$threshold,
-  "test_seuil_f1"
+logit_test_eval <- evaluate_logistic_probabilities(
+  probs = logit_test_prob,
+  truth_factor = logistic_test$is_canceled,
+  threshold = logit_final_model$threshold,
+  model_name = paste0(
+    "Regression logistique - ",
+    logit_final_model$model
+  ),
+  model_type = logit_final_model$type,
+  sample_name = "test_final"
 )
 
-results_logit_test <- bind_rows(
-  logit_test_balanced$metrics,
-  logit_test_f1$metrics
-) |>
-  distinct(
-    model,
-    threshold,
-    accuracy,
-    auc,
-    sensitivity_recall,
-    specificity,
-    precision,
-    f1_score,
-    balanced_accuracy,
-    .keep_all = TRUE
-  )
+results_logit_test <- logit_test_eval$metrics
 
 results_logit_test
-logit_test_balanced$confusion
-logit_test_f1$confusion
+logit_test_eval$confusion
+logistic_models_recap
 
 # ============================================================
 # 3. EVALUATION FINALE DE L'ANALYSE DISCRIMINANTE SUR TEST
 # ============================================================
 
-evaluate_discriminant_model <- function(true, pred, prob_yes, model_name) {
+evaluate_discriminant_model <- function(true, prob_yes, threshold, model_name) {
+  pred <- if_else(prob_yes >= threshold, "Oui", "Non")
+  pred <- factor(pred, levels = c("Non", "Oui"))
+
   cm <- caret::confusionMatrix(
     pred,
     true,
@@ -110,8 +106,10 @@ evaluate_discriminant_model <- function(true, pred, prob_yes, model_name) {
     roc = roc_obj,
     metrics = tibble(
       model = model_name,
+      model_type = "discriminant",
+      sample = "test_final",
       scenario = "test_final",
-      threshold = NA_real_,
+      threshold = threshold,
       accuracy = as.numeric(cm$overall["Accuracy"]),
       auc = as.numeric(pROC::auc(roc_obj)),
       sensitivity_recall = recall,
@@ -123,43 +121,74 @@ evaluate_discriminant_model <- function(true, pred, prob_yes, model_name) {
   )
 }
 
-train_validation_k <- bind_rows(train_k, validation_k)
+if (best_discriminant_model == "ACM + LDA") {
+  discriminant_test_pred <- predict(
+    lda_final,
+    newdata = test_k_final
+  )
 
-lda_final <- MASS::lda(
-  is_canceled ~ .,
-  data = train_validation_k
+  discriminant_test_class <- discriminant_test_pred$class
+  discriminant_test_prob_yes <- discriminant_test_pred$posterior[, "Oui"]
+} else if (best_discriminant_model == "ACM + QDA") {
+  discriminant_test_pred <- predict(
+    qda_final,
+    newdata = test_k_final
+  )
+
+  discriminant_test_class <- discriminant_test_pred$class
+  discriminant_test_prob_yes <- discriminant_test_pred$posterior[, "Oui"]
+} else {
+  x_test_knn_final <- test_k_final |>
+    dplyr::select(-is_canceled)
+
+  x_test_knn_scaled <- scale(
+    x_test_knn_final,
+    center = knn_final$center,
+    scale = knn_final$scale
+  )
+
+  discriminant_test_class <- class::knn(
+    train = knn_final$train,
+    test = x_test_knn_scaled,
+    cl = knn_final$class,
+    k = knn_final$k,
+    prob = TRUE,
+    use.all = FALSE
+  )
+
+  discriminant_test_prob_yes <- get_knn_prob_yes(discriminant_test_class)
+}
+
+discriminant_model_label <- if (best_discriminant_model == "ACM + KNN") {
+  paste0(
+    best_discriminant_model,
+    " (",
+    best_discriminant_n_axes,
+    " axes, k=",
+    best_discriminant_knn_k,
+    ")"
+  )
+} else {
+  paste0(
+    best_discriminant_model,
+    " (",
+    best_discriminant_n_axes,
+    " axes)"
+  )
+}
+
+discriminant_test_eval <- evaluate_discriminant_model(
+  true = test_k_final$is_canceled,
+  prob_yes = discriminant_test_prob_yes,
+  threshold = best_discriminant_threshold,
+  model_name = discriminant_model_label
 )
 
-qda_final <- MASS::qda(
-  is_canceled ~ .,
-  data = train_validation_k
-)
-
-lda_test_pred <- predict(lda_final, newdata = test_k)
-qda_test_pred <- predict(qda_final, newdata = test_k)
-
-lda_test_eval <- evaluate_discriminant_model(
-  true = test_k$is_canceled,
-  pred = lda_test_pred$class,
-  prob_yes = lda_test_pred$posterior[, "Oui"],
-  model_name = "ACM + LDA"
-)
-
-qda_test_eval <- evaluate_discriminant_model(
-  true = test_k$is_canceled,
-  pred = qda_test_pred$class,
-  prob_yes = qda_test_pred$posterior[, "Oui"],
-  model_name = "ACM + QDA"
-)
-
-results_discriminant_test <- bind_rows(
-  lda_test_eval$metrics,
-  qda_test_eval$metrics
-)
+results_discriminant_test <- discriminant_test_eval$metrics
 
 results_discriminant_test
-lda_test_eval$confusion
-qda_test_eval$confusion
+discriminant_test_eval$confusion
+discriminant_method_recap
 
 # ============================================================
 # 4. TABLEAU DE COMPARAISON FINAL

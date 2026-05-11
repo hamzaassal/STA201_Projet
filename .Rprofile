@@ -1,1 +1,3 @@
-source("renv/activate.R")
+if (Sys.getenv("STA201_USE_RENV") == "true") {
+  source("renv/activate.R")
+}

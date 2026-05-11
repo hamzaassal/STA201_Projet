@@ -129,7 +129,8 @@ dico_variables <- data.frame(
     "Non retenue",
     "Non retenue",
     "Retenue",
-    "Non retenue",
+    
+    "Retenue",
     "Non retenue",
     "Non retenue",
     "Non retenue",

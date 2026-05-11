@@ -282,10 +282,10 @@ p13  <- plot_univariate(df_desc,  "identity_location")
                  
 final_univariate_plot <-
   (p1 | p2) /
-  (p3 | p4) /
-  (p5 | p6) /
-  (p7 | p8) /
-  (p9 | p10) /
+  # (p3 | p4) /
+  # (p5 | p6) /
+  # (p7 | p8) /
+  # (p9 | p10) /
   (p11 | p12) +
   plot_annotation(
     title = "Distribution des variables explicatives",
@@ -346,10 +346,10 @@ table_uni_previous
 
 final_bivariate_plot <-
   (b1 | b2) /
-  (b13 | b4) /
-  (b5 | b6) /
-  (b7 | b8) /
-  (b9 | b10) /
+  # (b13 | b4) /
+  # (b5 | b6) /
+  # (b7 | b8) /
+  # (b9 | b10) /
   (b11 | b12) +
   plot_annotation(
     title = "Répartition des annulations selon les variables explicatives",

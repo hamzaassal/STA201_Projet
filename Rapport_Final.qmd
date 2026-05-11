@@ -250,13 +250,585 @@ L'objectif opérationnel du projet est de mieux identifier les réservations sus
 
 # Résultats de la première méthode : régression logistique
 
-Cette partie présentera la construction du modèle logistique, la sélection éventuelle des variables, l'interprétation des coefficients ou odds ratios, puis l'évaluation prédictive du modèle. Comme l'objectif principal est de mieux détecter les annulations, les indicateurs privilégiés seront notamment le recall, la précision, le F1-score et l'AUC, en complément de l'accuracy.
+Cette partie presente la construction des modeles de regression logistique. L'objectif est double : comparer plusieurs strategies de selection de variables et evaluer l'apport des regularisations ridge, lasso et elastic net. Comme pour l'analyse discriminante, le test final n'est pas utilise dans cette section. Les modeles sont estimes sur train, compares sur validation, puis le meilleur modele est reestime sur train + validation avant l'evaluation finale dans la partie comparaison.
+
+```{r}
+#| label: setup-logistique
+#| include: false
+invisible(capture.output(source("scripts/06-logistic.R")))
+```
+
+## Strategie de modelisation
+
+La regression logistique modelise directement la probabilite d'annulation d'une reservation. Les variables explicatives retenues dans la base de modelisation sont celles preparees dans `scripts/04-data preparation.R`, ce qui garantit que les modeles logistiques utilisent exactement les memes observations que l'analyse discriminante.
+
+Deux familles de modeles ont ete comparees. La premiere famille regroupe les regressions logistiques classiques avec differentes methodes de selection : modele complet, selection backward, selection forward et selection stepwise. Ces modeles sont compares notamment par leur AIC et par leurs performances sur validation.
+
+La deuxieme famille regroupe les regressions logistiques penalisees : ridge, lasso et elastic net. Ces methodes sont utiles lorsque les variables indicatrices issues des variables qualitatives sont nombreuses ou correlees. Ridge reduit les coefficients sans les annuler, lasso peut selectionner automatiquement certaines modalites en mettant des coefficients a zero, et elastic net combine ces deux comportements.
+
+```{r}
+#| label: tbl-methodologie-logistique
+#| tbl-cap: "Synthese de la strategie retenue pour la regression logistique"
+knitr::kable(
+  logistic_models_recap,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modele retenu",
+    "Type",
+    "Seuil",
+    "Base de selection",
+    "Base finale",
+    "Role du test"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+## Comparaison des modeles sur validation
+
+Le choix du modele repose d'abord sur la performance predictive observee sur validation. L'AUC mesure la capacite generale du modele a separer les reservations annulees des reservations non annulees, independamment du seuil. Le F1-score complete cette lecture car il tient compte a la fois du rappel et de la precision pour la modalite d'interet, ici l'annulation.
+
+```{r}
+#| label: tbl-logit-validation
+#| tbl-cap: "Performances des modeles logistiques sur validation"
+logistic_validation_report <- logistic_validation_metrics |>
+  dplyr::select(
+    model,
+    model_type,
+    threshold,
+    accuracy,
+    auc,
+    sensitivity_recall,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  )
+
+knitr::kable(
+  logistic_validation_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modele",
+    "Type",
+    "Seuil",
+    "Accuracy",
+    "AUC",
+    "Recall",
+    "Specificite",
+    "Precision",
+    "F1-score",
+    "Balanced accuracy"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: fig-logit-validation-auc-f1
+#| fig-cap: "AUC et F1-score des modeles logistiques sur validation"
+logistic_validation_metrics |>
+  dplyr::select(model, auc, f1_score) |>
+  tidyr::pivot_longer(
+    cols = c(auc, f1_score),
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  dplyr::mutate(
+    model = forcats::fct_reorder(model, value, .fun = max)
+  ) |>
+  ggplot(aes(x = value, y = model, color = metric)) +
+  geom_point(size = 2.5) +
+  facet_wrap(~metric, scales = "free_x") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    x = "Valeur sur validation",
+    y = "Modele",
+    color = "Metrique"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+Les resultats montrent que les modeles logistiques classiques et penalises sont proches. Dans notre execution, le modele retenu automatiquement est `r logistic_models_recap$selected_model`, avec un seuil de `r round(logistic_models_recap$selected_threshold, 2)`. Ce choix est effectue sur validation et non sur test.
+
+## AIC et complexite des modeles
+
+L'AIC permet de comparer les modeles logistiques classiques en arbitrant entre qualite d'ajustement et complexite. Pour les modeles penalises, nous calculons un AIC approximatif fonde sur la log-vraisemblance et le nombre de coefficients non nuls. Il ne doit pas etre interprete comme un AIC strictement equivalent a celui d'un `glm`, mais il donne un repere utile pour comparer ridge, lasso et elastic net entre eux.
+
+```{r}
+#| label: tbl-logit-aic
+#| tbl-cap: "AIC et AIC approximatif des modeles logistiques"
+knitr::kable(
+  logistic_aic_table,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modele",
+    "Type",
+    "Alpha",
+    "Lambda 1se",
+    "Log-vraisemblance train",
+    "Coefficients non nuls",
+    "AIC / AIC approx."
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+## Choix du seuil de classification
+
+Une regression logistique produit une probabilite d'annulation. Pour transformer cette probabilite en classe predite, il faut choisir un seuil. Le seuil par defaut de 0,50 n'est pas necessairement le plus adapte, car l'objectif metier consiste surtout a bien detecter les annulations sans degrader excessivement la precision.
+
+Le seuil est donc optimise sur validation apres le choix du modele. Le critere principal est le F1-score, qui equilibre precision et rappel.
+
+```{r}
+#| label: fig-logit-seuil
+#| fig-cap: "Evolution des metriques selon le seuil du modele logistique retenu"
+threshold_table |>
+  dplyr::select(
+    threshold,
+    accuracy,
+    sensitivity_recall,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  ) |>
+  tidyr::pivot_longer(
+    cols = -threshold,
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  ggplot(aes(x = threshold, y = value, color = metric)) +
+  geom_line(linewidth = 0.9) +
+  geom_vline(
+    xintercept = logistic_models_recap$selected_threshold,
+    linetype = "dashed",
+    color = "black"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    x = "Seuil de classification",
+    y = "Valeur",
+    color = "Metrique"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "bottom")
+```
+
+```{r}
+#| label: tbl-logit-seuil
+#| tbl-cap: "Seuil retenu pour le modele logistique"
+threshold_best_logit <- threshold$best_f1 |>
+  dplyr::select(
+    threshold,
+    accuracy,
+    sensitivity_recall,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  )
+
+knitr::kable(
+  threshold_best_logit,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Seuil",
+    "Accuracy",
+    "Recall",
+    "Specificite",
+    "Precision",
+    "F1-score",
+    "Balanced accuracy"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+## Variables importantes
+
+L'interpretation depend du type de modele retenu. Pour une regression logistique classique, les odds ratios permettent de lire le sens et l'intensite de l'association entre une modalite et la probabilite d'annulation. Un odds ratio superieur a 1 indique une augmentation des chances d'annulation, tandis qu'un odds ratio inferieur a 1 indique une diminution, toutes choses egales par ailleurs.
+
+Pour les modeles penalises, l'importance est calculee a partir de la valeur absolue des coefficients standardises par le coefficient maximal du modele. Le lasso et l'elastic net peuvent aussi indiquer quelles modalites sont effectivement conservees, car certains coefficients peuvent etre mis a zero.
+
+```{r}
+#| label: tbl-logit-variables-meilleur-modele
+#| tbl-cap: "Variables ou modalites les plus importantes du modele logistique retenu"
+if (best_logistic_model_type == "glm_selection") {
+  best_logistic_variables_report <- best_logistic_coefficients |>
+    dplyr::filter(term != "(Intercept)") |>
+    dplyr::transmute(
+      modele = model,
+      variable = original_variable,
+      modalite = term,
+      odds_ratio = estimate,
+      p_value = p.value,
+      importance = importance
+    ) |>
+    dplyr::slice_max(importance, n = 15)
+} else {
+  best_logistic_variables_report <- best_logistic_coefficients |>
+    dplyr::transmute(
+      modele = model,
+      variable = original_variable,
+      modalite = dummy_variable,
+      odds_ratio = exp(coefficient),
+      p_value = NA_real_,
+      importance = importance
+    ) |>
+    dplyr::slice_max(importance, n = 15)
+}
+
+knitr::kable(
+  best_logistic_variables_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modele",
+    "Variable",
+    "Modalite",
+    "Odds ratio",
+    "p-value",
+    "Importance"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: fig-logit-variables-meilleur-modele
+#| fig-cap: "Principales variables ou modalites du modele logistique retenu"
+best_logistic_variables_report |>
+  dplyr::mutate(
+    modalite = stringr::str_replace_all(modalite, "_", " "),
+    modalite = forcats::fct_reorder(modalite, importance)
+  ) |>
+  ggplot(aes(x = importance, y = modalite)) +
+  geom_col(fill = "#C9002B", width = 0.7) +
+  labs(
+    x = "Importance relative",
+    y = "Modalite"
+  ) +
+  theme_minimal(base_size = 11)
+```
+
+Pour completer l'analyse des regularisations, le tableau suivant presente l'importance agregee des variables dans les modeles penalises. Cette lecture est utile car une meme variable qualitative peut generer plusieurs indicatrices.
+
+```{r}
+#| label: tbl-logit-importance-penalisee
+#| tbl-cap: "Importance agregee des variables dans les modeles penalises"
+penalized_importance_report <- penalized_variable_importance |>
+  dplyr::group_by(model) |>
+  dplyr::slice_max(importance_relative, n = 5) |>
+  dplyr::ungroup()
+
+knitr::kable(
+  penalized_importance_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modele",
+    "Variable",
+    "Modalites retenues",
+    "Importance somme",
+    "Importance max",
+    "Importance relative"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+En synthese, la regression logistique fournit une reference predictive solide et interpretable. Elle permet de quantifier les facteurs associes aux annulations, tout en comparant des versions classiques et penalisees. L'evaluation finale de ce meilleur modele logistique sur la base test est presentee dans la section de comparaison finale, afin de conserver une separation nette entre selection de modele et mesure de performance finale.
 
 \newpage
 
 # Résultats de la deuxième méthode : analyse discriminante sur variables qualitatives
 
-Cette partie présentera l'application de l'analyse discriminante sur variables qualitatives aux variables retenues. L'analyse devra mettre en évidence les modalités qui contribuent le plus à la séparation entre les réservations annulées et non annulées, ainsi que la qualité de discrimination obtenue.
+Cette partie présente l'application de la méthode DISQUAL à notre problème de prédiction des annulations. L'idée générale consiste à transformer les variables qualitatives en axes factoriels continus à l'aide d'une ACM, puis à utiliser ces axes comme variables explicatives dans des modèles de classification. Nous comparons ici trois classifieurs construits sur les axes ACM : la LDA, la QDA et le KNN.
+
+```{r}
+#| label: setup-analyse-discriminante
+#| include: false
+invisible(capture.output(source("scripts/05-Analyse Discriminante.R")))
+```
+
+## Stratégie méthodologique
+
+L'analyse discriminante a été construite dans une logique strictement prédictive. La base a d'abord été séparée en trois échantillons : train, validation et test. La base train sert à apprendre la représentation factorielle et les modèles ; la base validation sert à choisir le nombre d'axes, le type de modèle et le seuil de classification ; la base test reste réservée à l'évaluation finale.
+
+Une attention particulière a été portée au risque de fuite d'information. Pour la phase de sélection, l'ACM est estimée uniquement sur la base train. Les individus de validation et de test sont ensuite projetés comme individus supplémentaires. Ainsi, la structure factorielle utilisée pour sélectionner le modèle ne dépend pas des observations de validation ni de test.
+
+La sélection du modèle se fait en deux temps. Premièrement, on compare plusieurs nombres d'axes ACM et plusieurs modèles à partir de l'AUC sur validation. L'AUC est utilisée à cette étape car elle évalue la capacité de séparation du modèle indépendamment d'un seuil de classification particulier. Deuxièmement, une fois le meilleur couple modèle / nombre d'axes retenu, le seuil de classification est optimisé sur validation, principalement à partir du F1-score afin de mieux équilibrer précision et rappel sur la classe des réservations annulées.
+
+Après cette sélection, le modèle final est réestimé en utilisant train + validation comme échantillon actif pour l'ACM finale. La base test est alors projetée en individu supplémentaire, puis utilisée une seule fois pour mesurer la performance finale. Cette stratégie permet d'utiliser davantage de données pour le modèle final tout en conservant une évaluation honnête sur test.
+
+```{r}
+#| label: tbl-methodologie-discriminante
+#| tbl-cap: "Synthèse de la stratégie retenue pour l'analyse discriminante"
+knitr::kable(
+  discriminant_method_recap,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modèle retenu",
+    "Axes retenus",
+    "k KNN",
+    "Seuil",
+    "Axes disponibles",
+    "Max axes testés",
+    "Max k testé",
+    "Base de sélection",
+    "Base active finale",
+    "Rôle du test"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+## Tests statistiques sur les axes de l'ACM
+
+Avant de lancer la grid search, nous verifions les hypotheses statistiques associees aux axes factoriels issus de l'ACM. Ces tests sont realises sur les axes candidats construits a partir de la base d'entrainement, avant le choix final du nombre d'axes. Cette position est importante : les diagnostics portent sur la representation factorielle disponible, puis la selection predictive decide ensuite combien d'axes conserver.
+
+La LDA suppose une normalite multivariee des variables explicatives dans les groupes et une homogeneite des matrices de covariance entre les classes. La QDA relache l'hypothese d'homogeneite des covariances, mais reste plus stable lorsque les axes utilises ne s'eloignent pas trop fortement d'une structure gaussienne. Ces tests ne decident donc pas seuls du modele final : ils servent a evaluer la pertinence statistique des hypotheses, en complement des performances observees sur validation et test.
+
+```{r}
+#| label: tbl-shapiro-axes-acm
+#| tbl-cap: "Tests de Shapiro-Wilk sur les axes ACM candidats"
+knitr::kable(
+  shapiro_axes_results,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c("Axe", "Statistique", "p-value", "Conclusion")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: tbl-normalite-multivariee-acm
+#| tbl-cap: "Tests de normalite multivariee sur les axes ACM candidats"
+normality_multivariate_table <- dplyr::bind_rows(
+  mardia_test_table,
+  henze_zirkler_test_table
+)
+
+knitr::kable(
+  normality_multivariate_table,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: tbl-box-m-acm
+#| tbl-cap: "Test de Box M pour l'homogeneite des matrices de covariance"
+knitr::kable(
+  box_m_test_table,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c("Test", "Statistique", "Degres de liberte", "p-value", "Conclusion")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+Lorsque les tests de normalite sont rejetes, l'utilisation de la LDA et de la QDA doit etre interpretee avec prudence : ces methodes restent utilisables comme classifieurs, mais leur justification probabiliste stricte est affaiblie. Lorsque le test de Box M rejette l'homogeneite des matrices de covariance, la QDA devient theoriquement plus flexible que la LDA, mais elle peut aussi etre plus instable si le nombre d'axes est trop eleve. C'est pourquoi le choix final du modele repose sur une validation empirique du nombre d'axes, du type de classifieur et du seuil de classification.
+
+## Choix du nombre d'axes et du classifieur
+
+Le nombre d'axes ACM ne doit pas être choisi uniquement à partir de l'inertie factorielle. Dans notre cadre, l'objectif est prédictif : nous cherchons le nombre d'axes qui améliore réellement la capacité à distinguer les réservations annulées des réservations non annulées. Pour cette raison, une grille de recherche est appliquée sur la base validation.
+
+La grille compare plusieurs nombres d'axes pour la LDA, la QDA et le KNN. Pour le KNN, plusieurs valeurs de `k` sont aussi testées. Ce paramètre correspond au nombre de voisins utilisés pour classer une réservation : une petite valeur de `k` donne un modèle plus local et potentiellement plus instable, tandis qu'une grande valeur lisse davantage la décision mais peut perdre des profils spécifiques.
+
+```{r}
+#| label: tbl-grid-modeles-discriminants
+#| tbl-cap: "Meilleure performance de validation par famille de modèle"
+results_validation_summary_report <- results_validation_summary |>
+  dplyr::mutate(
+    knn_k = dplyr::if_else(is.na(knn_k), NA_real_, knn_k)
+  ) |>
+  dplyr::select(
+    model,
+    n_axes,
+    knn_k,
+    auc,
+    accuracy,
+    sensitivity_recall,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  )
+
+knitr::kable(
+  results_validation_summary_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modèle",
+    "Axes",
+    "k",
+    "AUC",
+    "Accuracy",
+    "Recall",
+    "Spécificité",
+    "Précision",
+    "F1-score",
+    "Balanced accuracy"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: fig-grid-auc-discriminante
+#| fig-cap: "AUC de validation selon le nombre d'axes ACM et le modèle"
+plot_discriminant_grid_auc
+```
+
+```{r}
+#| label: fig-grid-f1-discriminante
+#| fig-cap: "F1-score de validation selon le nombre d'axes ACM et le modèle"
+plot_discriminant_grid_f1
+```
+
+```{r}
+#| label: tbl-grid-knn-discriminante
+#| tbl-cap: "Synthèse de la recherche du paramètre k pour le KNN"
+knitr::kable(
+  knn_validation_summary,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "k",
+    "Meilleure AUC",
+    "Meilleur F1-score",
+    "Nombre d'axes associé à la meilleure AUC"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+Au regard des résultats de validation, le modèle retenu est celui qui présente la meilleure AUC, puis le meilleur F1-score en cas de performances proches. Dans notre cas, la sélection retient le modèle `r discriminant_method_recap$selected_model`, avec `r discriminant_method_recap$selected_n_axes` axes ACM. Pour le KNN, la valeur retenue est `k = r discriminant_method_recap$selected_knn_k`.
+
+## Choix du seuil de classification
+
+Les modèles produisent une probabilité ou un score associé à la modalité "Oui" de `is_canceled`. Le seuil par défaut de 0,50 n'est pas forcément optimal, surtout lorsque l'objectif est de détecter les annulations. Nous avons donc optimisé le seuil sur la base validation après avoir choisi le modèle et le nombre d'axes.
+
+Le critère principal retenu est le F1-score. Ce choix est cohérent avec l'objectif métier : il faut repérer un maximum d'annulations tout en évitant de générer trop de fausses alertes. Le seuil retenu est `r round(discriminant_method_recap$selected_threshold, 2)`.
+
+```{r}
+#| label: tbl-seuil-discriminant
+#| tbl-cap: "Seuil de classification retenu sur validation"
+threshold_best_report <- threshold_discriminant$best_f1 |>
+  dplyr::select(
+    threshold,
+    accuracy,
+    sensitivity_recall,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  )
+
+knitr::kable(
+  threshold_best_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Seuil",
+    "Accuracy",
+    "Recall",
+    "Spécificité",
+    "Précision",
+    "F1-score",
+    "Balanced accuracy"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
 
 \newpage
 
