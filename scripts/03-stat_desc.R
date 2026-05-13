@@ -345,12 +345,12 @@ table_uni_previous
 (b13 =plot_bivariate(df_desc,"identity_location"))
 
 final_bivariate_plot <-
-  (b1 | b2) /
+  # (b1 | b2) /
   # (b13 | b4) /
   # (b5 | b6) /
   # (b7 | b8) /
   # (b9 | b10) /
-  (b11 | b12) +
+  (b6 | b11) +
   plot_annotation(
     title = "Répartition des annulations selon les variables explicatives",
     theme = theme(
@@ -360,6 +360,22 @@ final_bivariate_plot <-
 
 final_bivariate_plot
 
+final_bivariate_plot_all <-
+  # (b1 | b2) /
+  # (b13 | b4) /
+  # (b5 | b6) /
+  
+  (b2 | b12)/
+   (b13 | b5) /
+  (b9 | b8) 
+   +
+  plot_annotation(
+    title = "Répartition des annulations selon les variables explicatives",
+    theme = theme(
+      plot.title = element_text(size = 21, face = "bold", hjust = 0.5)
+    )
+  )
+final_bivariate_plot_all
 # ============================================================
 # TABLEAUX BIVARIES INDIVIDUELS
 # ============================================================
@@ -509,7 +525,7 @@ cramer_matrix
 # HEATMAP 
 # ============================================================
 
-corrplot(
+HEATMAP_CRAMER=corrplot(
   cramer_matrix,
   
   method = "color",

@@ -6,8 +6,13 @@
 # Les scripts 05 et 06 construisent les modeles et choisissent les
 # options sur validation ; le test final est reserve a ce fichier.
 
-source("scripts/06-logistic.R")
-source("scripts/05-Analyse Discriminante.R")
+if (!exists("logit_final_model")) {
+  source("scripts/06-logistic.R")
+}
+
+if (!exists("discriminant_method_recap")) {
+  source("scripts/05-Analyse Discriminante.R")
+}
 
 # ============================================================
 # 1. CONTROLES POUR L'ANALYSE DISCRIMINANTE
