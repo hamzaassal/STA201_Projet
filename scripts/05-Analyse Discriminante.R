@@ -373,7 +373,7 @@ max_factor_axes <- length(available_axes)
 # 4. INTERPRETATION AUTOMATIQUE DES AXES ACM
 # ============================================================
 
-interpret_mca_axes <- function(res_mca, n_axes = 5, top_n = 8) {
+interpret_mca_axes <- function(res_mca, active_data, active_vars, n_axes = 5, top_n = 8) {
   max_axes <- min(
     n_axes,
     ncol(res_mca$var$coord),
@@ -393,14 +393,68 @@ interpret_mca_axes <- function(res_mca, n_axes = 5, top_n = 8) {
     "cumulative_inertia_percent"
   )[seq_len(min(4, ncol(eig_table)))]
 
+  modality_dictionary <- purrr::map_dfr(
+    active_vars,
+    \(var_name) {
+      tibble(
+        original_variable = var_name,
+        modality_value = levels(active_data[[var_name]]),
+        modality = modality_value,
+        modality_prefixed = paste(var_name, modality_value, sep = "_")
+      )
+    }
+  )
+
+  duplicated_raw_modalities <- modality_dictionary |>
+    count(modality) |>
+    filter(n > 1) |>
+    pull(modality)
+
+  modality_dictionary_long <- bind_rows(
+    modality_dictionary |>
+      mutate(modality_key = modality),
+    modality_dictionary |>
+      mutate(modality_key = modality_prefixed)
+  ) |>
+    mutate(
+      modality_label = if_else(
+        modality %in% duplicated_raw_modalities,
+        paste0(original_variable, " = ", modality_value, " (modalite partagee)"),
+        paste0(original_variable, " = ", modality_value)
+      )
+    ) |>
+    dplyr::select(
+      modality_key,
+      original_variable,
+      modality_value,
+      modality_label
+    ) |>
+    distinct(modality_key, .keep_all = TRUE)
+
+  add_modality_labels <- function(data) {
+    data |>
+      left_join(
+        modality_dictionary_long,
+        by = c("modality" = "modality_key")
+      ) |>
+      mutate(
+        original_variable = coalesce(original_variable, "Variable non identifiee"),
+        modality_value = coalesce(modality_value, modality),
+        modality_label = coalesce(modality_label, modality)
+      )
+  }
+
   coord_var <- as.data.frame(res_mca$var$coord) |>
-    tibble::rownames_to_column("modality")
+    tibble::rownames_to_column("modality") |>
+    add_modality_labels()
 
   contrib_var <- as.data.frame(res_mca$var$contrib) |>
-    tibble::rownames_to_column("modality")
+    tibble::rownames_to_column("modality") |>
+    add_modality_labels()
 
   cos2_var <- as.data.frame(res_mca$var$cos2) |>
-    tibble::rownames_to_column("modality")
+    tibble::rownames_to_column("modality") |>
+    add_modality_labels()
 
   target_coord <- NULL
 
@@ -422,22 +476,46 @@ interpret_mca_axes <- function(res_mca, n_axes = 5, top_n = 8) {
       axis_name <- axis_names[axis_id]
 
       positive_modalities <- coord_var |>
-        dplyr::select(modality, coordinate = all_of(axis_name)) |>
+        dplyr::select(
+          original_variable,
+          modality_value,
+          modality,
+          modality_label,
+          coordinate = all_of(axis_name)
+        ) |>
         arrange(desc(coordinate)) |>
         slice_head(n = top_n)
 
       negative_modalities <- coord_var |>
-        dplyr::select(modality, coordinate = all_of(axis_name)) |>
+        dplyr::select(
+          original_variable,
+          modality_value,
+          modality,
+          modality_label,
+          coordinate = all_of(axis_name)
+        ) |>
         arrange(coordinate) |>
         slice_head(n = top_n)
 
       top_contributions <- contrib_var |>
-        dplyr::select(modality, contribution = all_of(axis_name)) |>
+        dplyr::select(
+          original_variable,
+          modality_value,
+          modality,
+          modality_label,
+          contribution = all_of(axis_name)
+        ) |>
         arrange(desc(contribution)) |>
         slice_head(n = top_n)
 
       top_cos2 <- cos2_var |>
-        dplyr::select(modality, cos2 = all_of(axis_name)) |>
+        dplyr::select(
+          original_variable,
+          modality_value,
+          modality,
+          modality_label,
+          cos2 = all_of(axis_name)
+        ) |>
         arrange(desc(cos2)) |>
         slice_head(n = top_n)
 
@@ -454,11 +532,11 @@ interpret_mca_axes <- function(res_mca, n_axes = 5, top_n = 8) {
         interpretation = paste0(
           axis_name,
           " oppose surtout les modalites a coordonnees negatives (",
-          paste(negative_modalities$modality[seq_len(min(3, nrow(negative_modalities)))], collapse = ", "),
+          paste(negative_modalities$modality_label[seq_len(min(3, nrow(negative_modalities)))], collapse = ", "),
           ") aux modalites a coordonnees positives (",
-          paste(positive_modalities$modality[seq_len(min(3, nrow(positive_modalities)))], collapse = ", "),
+          paste(positive_modalities$modality_label[seq_len(min(3, nrow(positive_modalities)))], collapse = ", "),
           "). Les modalites les plus contributives sont : ",
-          paste(top_contributions$modality[seq_len(min(5, nrow(top_contributions)))], collapse = ", "),
+          paste(top_contributions$modality_label[seq_len(min(5, nrow(top_contributions)))], collapse = ", "),
           "."
         ),
         positive_modalities = list(positive_modalities),
@@ -475,7 +553,8 @@ interpret_mca_axes <- function(res_mca, n_axes = 5, top_n = 8) {
     eigenvalues = eig_table,
     axis_details = axis_details,
     target_coordinates = target_coord,
-    target_eta2 = target_eta2
+    target_eta2 = target_eta2,
+    modality_dictionary = modality_dictionary_long
   )
 }
 
@@ -483,6 +562,8 @@ acm_n_axes_interpretation <- min(5, max_factor_axes)
 
 acm_axis_interpretation <- interpret_mca_axes(
   res_mca = res_mca_train,
+  active_data = train_raw,
+  active_vars = active_vars,
   n_axes = acm_n_axes_interpretation,
   top_n = 8
 )
@@ -500,14 +581,112 @@ acm_axis_interpretation$axis_details |>
 acm_axis_interpretation$target_coordinates
 acm_axis_interpretation$target_eta2
 
+acm_modalities_dictionary <- acm_axis_interpretation$modality_dictionary |>
+  dplyr::select(
+    modality_key,
+    original_variable,
+    modality_value,
+    modality_label
+  ) |>
+  arrange(original_variable, modality_value)
+
+acm_modalities_coordinates_labeled <- as.data.frame(res_mca_train$var$coord) |>
+  tibble::rownames_to_column("modality") |>
+  left_join(
+    acm_axis_interpretation$modality_dictionary,
+    by = c("modality" = "modality_key")
+  ) |>
+  mutate(
+    original_variable = coalesce(original_variable, "Variable non identifiee"),
+    modality_value = coalesce(modality_value, modality),
+    modality_label = coalesce(modality_label, modality)
+  )
+
+plot_mca_modalities_labeled <- function(dims = c(1, 2), top_n = 30) {
+  dim_names <- paste0("Dim ", dims)
+
+  contribution_plane <- as.data.frame(res_mca_train$var$contrib) |>
+    tibble::rownames_to_column("modality") |>
+    transmute(
+      modality,
+      contribution_plane = .data[[dim_names[1]]] + .data[[dim_names[2]]]
+    )
+
+  target_plane <- acm_axis_interpretation$target_coordinates |>
+    dplyr::select(
+      target_modality,
+      x = all_of(dim_names[1]),
+      y = all_of(dim_names[2])
+    )
+
+  acm_modalities_coordinates_labeled |>
+    dplyr::select(
+      modality,
+      modality_label,
+      x = all_of(dim_names[1]),
+      y = all_of(dim_names[2])
+    ) |>
+    left_join(contribution_plane, by = "modality") |>
+    slice_max(contribution_plane, n = top_n) |>
+    ggplot(aes(x = x, y = y)) +
+    geom_hline(yintercept = 0, color = "grey75", linewidth = 0.4) +
+    geom_vline(xintercept = 0, color = "grey75", linewidth = 0.4) +
+    geom_point(aes(size = contribution_plane), color = "#C9002B", alpha = 0.75) +
+    geom_text(
+      aes(label = modality_label),
+      size = 3,
+      check_overlap = TRUE,
+      vjust = -0.7
+    ) +
+    geom_point(
+      data = target_plane,
+      aes(x = x, y = y),
+      inherit.aes = FALSE,
+      color = "#1F77B4",
+      fill = "#1F77B4",
+      size = 4,
+      shape = 23
+    ) +
+    geom_text(
+      data = target_plane,
+      aes(x = x, y = y, label = target_modality),
+      inherit.aes = FALSE,
+      color = "#1F77B4",
+      fontface = "bold",
+      size = 3.5,
+      vjust = 1.4
+    ) +
+    scale_size_continuous(range = c(2, 6)) +
+    labs(
+      title = paste0("Plan factoriel ", dims[1], "-", dims[2]),
+      subtitle = "Modalites actives labellisees par variable d'origine et cible projetee",
+      x = dim_names[1],
+      y = dim_names[2],
+      size = "Contribution au plan"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      legend.position = "bottom",
+      panel.grid.minor = element_blank()
+    )
+}
+
+plot_mca_modalities_labeled_12 <- plot_mca_modalities_labeled(c(1, 2), top_n = 30)
+plot_mca_modalities_labeled_34 <- plot_mca_modalities_labeled(c(3, 4), top_n = 30)
+
+acm_modalities_dictionary
+plot_mca_modalities_labeled_12
+plot_mca_modalities_labeled_34
+
 # Grid search allegee :
 # - les premiers axes sont testes finement ;
 # - quelques valeurs plus grandes permettent de verifier si ajouter
 #   davantage d'information factorielle ameliore la prediction.
 axis_grid <- unique(
   pmin(
-    c(1, 2, 3, 4, 5, 7, 10, 15, 20),
-    max_factor_axes
+    c(1, 2, 3, 4, 5, 7, 10, 15, 20,26)
+    # max_factor_axes ,
+   
   )
 )
 
@@ -680,16 +859,72 @@ knn_validation_summary <- results_validation |>
 
 knn_validation_summary
 
-best_discriminant_choice <- results_validation |>
+best_discriminant_choice_by_auc <- results_validation |>
   filter(!is.na(auc)) |>
   arrange(desc(auc), desc(f1_score), desc(sensitivity_recall)) |>
   slice(1)
+
+# Le maximum d'AUC est conserve comme point de comparaison. Le modele retenu
+# privilegie ensuite la parcimonie lorsque la perte d'AUC reste marginale.
+selected_discriminant_model <- "ACM + KNN"
+selected_discriminant_n_axes <- 15
+selected_discriminant_knn_k <- 15
+
+best_discriminant_choice <- results_validation |>
+  filter(
+    model == selected_discriminant_model,
+    n_axes == selected_discriminant_n_axes,
+    knn_k == selected_discriminant_knn_k,
+    !is.na(auc)
+  ) |>
+  slice(1)
+
+if (nrow(best_discriminant_choice) == 0) {
+  stop(
+    "Le modele discriminant parcimonieux demande n'est pas present dans results_validation. ",
+    "Verifier axis_grid et knn_k_grid."
+  )
+}
 
 best_discriminant_model <- best_discriminant_choice$model
 best_discriminant_n_axes <- best_discriminant_choice$n_axes
 best_discriminant_knn_k <- best_discriminant_choice$knn_k
 
+best_discriminant_choice_by_auc
 best_discriminant_choice
+
+# Tableau des gains marginaux d'AUC pour le KNN retenu
+auc_gain_marginal_table <- results_validation |>
+  dplyr::filter(
+    model == "ACM + KNN",
+    knn_k == best_discriminant_knn_k,
+    !is.na(auc)
+  ) |>
+  dplyr::arrange(n_axes) |>
+  dplyr::mutate(
+    best_auc = max(auc, na.rm = TRUE),
+    auc_reference = auc[n_axes == best_discriminant_n_axes][1],
+    gain_vs_previous = auc - dplyr::lag(auc),
+    gain_vs_reference = auc - auc_reference,
+    gap_to_best = best_auc - auc,
+    interpretation = dplyr::case_when(
+      n_axes < best_discriminant_n_axes ~ "Gain encore utile",
+      n_axes == best_discriminant_n_axes ~ "Choix retenu",
+      n_axes > best_discriminant_n_axes & gap_to_best <= 0.01 ~ "Gain marginal faible",
+      TRUE ~ "Gain a discuter"
+    )
+  ) |>
+  dplyr::select(
+    n_axes,
+    knn_k,
+    auc,
+    gain_vs_previous,
+    gain_vs_reference,
+    gap_to_best,
+    interpretation
+  )
+
+auc_gain_marginal_table
 
 selected_axes <- available_axes[seq_len(best_discriminant_n_axes)]
 

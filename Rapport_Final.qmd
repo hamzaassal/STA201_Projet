@@ -19,6 +19,8 @@ format:
     include-in-header:
       text: |
         \definecolor{cnamred}{HTML}{C9002B}
+        \usepackage{float}
+        \usepackage{placeins}
         \usepackage{fancyhdr}
         \pagestyle{fancy}
         \fancyhf{}
@@ -147,7 +149,7 @@ Les principales variables utilisées dans l'étude sont décrites en Annexe, dan
 
 # Description des données, prétraitements et statistiques descriptives
 
-La structure générale de la base est résumée en Annexe dans le Tableau @tbl-base-recap. <!-- Les variables retenues pour la modélisation logistique sont présentées dans le Tableau @tbl-variables-modelisation. Ces tableaux sont placés en annexe pour une lecture plus détaillée. -->
+La structure générale de la base est résumée en Annexe dans le Tableau @tbl-base-recap.
 
 ## Nettoyage et cohérence des données et data engenering
 
@@ -167,10 +169,9 @@ Aussi les variables *total_of_special_requests*, *booking_changes*, *parking* de
 
 L'exhausivité des variables construites et leurs détails sont dans le Tableau @tbl-variables-creees.
 
-## Analyse statistique  élémentaire
+## Analyse statistique élémentaire
 
-Notre variable d'intérêt "is_canceled" présente *37%* des reservations  annulées, ce qui reste un niveau élévé d'ou l'importance de ce type d'étude et qui nous donne une base relativement équilibrée entre les deux modalités.
-
+Notre variable d'intérêt "is_canceled" présente *37%* des reservations annulées, ce qui reste un niveau élévé d'ou l'importance de ce type d'étude et qui nous donne une base relativement équilibrée entre les deux modalités.
 
 ```{r}
 source("scripts/02-data_engenering.R")
@@ -179,24 +180,53 @@ source(("scripts/03-stat_desc.R"))
 #| fig-cap: "stat desc" 
 final_bivariate_plot
 ```
-Nous faisons un focus sur deux des variables crées à savoir le délai de réservation et l'engagement client.
-d'aprés l'analyse bivariée en figure @fig-stat on constat que plus le délai de reservation est long plus la probabilité d'annulation augmente. Aussi un fort engagement du client traduit par une faible probabilité d'annulation.
+
+Nous faisons un focus sur deux des variables crées à savoir le délai de réservation et l'engagement client. d'aprés l'analyse bivariée en figure @fig-stat on constat que plus le délai de reservation est long plus la probabilité d'annulation augmente. Aussi un fort engagement du client traduit par une faible probabilité d'annulation.
 
 Vous trouverez un panorama des statistiques bivariées avec notre variable d’intérêt en annexe @final_bivariate_plot_all
 
-Aussi une étude de corrélation entre les variable a été faite, en voici la matrice sortante @fig-stat_corr
+Aussi une étude de corrélation entre les variables a été faite sur la base du V de cramer. Nous en déduisons une corrélation faible entre la majorité des variables (V-cramer\<0.2). Toutefois quelques variables présentent une forte corrélation (exemple entre *market_segment* et *distribution_channel* =\> cramer_v=0.604). Ce constat nous a mené à arbitrer entre ces deux variables. L'ensemble de la matrice des assosiciations est détaillé sur la figure @fig-stat_corr en annexe.
 
 \newpage
 
 # Objectif de l'étude et démarche choisie
 
-L'objectif opérationnel du projet est de mieux identifier les réservations susceptibles d'être annulées. La démarche retenue consiste d'abord à construire des variables qualitatives interprétables, puis à mobiliser deux méthodes : la régression logistique, pour estimer une probabilité d'annulation et interpréter l'effet des facteurs explicatifs, et l'analyse discriminante sur variables qualitatives, pour étudier la discrimination entre les profils de réservations annulées et non annulées.
+L'objectif opérationnel du projet est de mieux identifier les réservations susceptibles d'être annulées. La démarche retenue consiste, aprés avoir construit des variables qualitatives interprétables, à mobiliser deux méthodes : la régression logistique, pour estimer une probabilité d'annulation et interpréter l'effet des facteurs explicatifs, et l'analyse discriminante sur variables qualitatives, pour étudier la discrimination entre les profils de réservations annulées et non annulées.
+
+Pour les deux méthodes nous avons retenues `r nrow(table_variables_modelisation)` variables qualitatives qui nous semblent les plus pertinentes pour l'étude présentées dans le Tableau @tbl-variables-modelisation.
+
+```{r}
+#| label: tbl-variables-modelisation
+#| tbl-cap: "Variables retenues pour les modélisations "
+knitr::kable(
+  table_variables_modelisation,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  col.names = c("Variable", "Rôle dans l'analyse")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 8
+  ) |>
+  kableExtra::column_spec(1, width = "4.2cm") |>
+  kableExtra::column_spec(2, width = "7.5cm")
+```
+
+En ce qui concerne la démarche de modélisation, la base de données a été divisée en trois sous-échantillons : une base d’entraînement (base train) contenant 50 % des observations, une base de validation contenant 25 % des observations et une base test contenant les 25 % restants. Ce découpage a été réalisé à l’aide d’un échantillonnage stratifié selon la variable cible.
+
+Pour chaque méthode, les modèles ont d’abord été construits à partir de la base d’entraînement. Le choix du meilleur modèle a ensuite été effectué sur la base des performances observées sur la base de validation.
+
+Une fois le modèle optimal sélectionné, celui-ci a été réestimé sur l’ensemble des données d’entraînement et de validation (soit 75 % des données). Enfin, l’évaluation finale des performances a été réalisée exclusivement sur la base test, laquelle n’a été utilisée ni pour la construction ni pour la sélection des modèles.
+
+La figure @fig-schema en annexe présente la démarche suivie pour la modélisation.
 
 \newpage
 
-# Résultats de la première méthode : régression logistique
+# Résultats et interprétations de la première méthode : régression logistique
 
-Cette partie presente la construction des modeles de regression logistique. L'objectif est double : comparer plusieurs strategies de selection de variables et evaluer l'apport des regularisations ridge, lasso et elastic net. Comme pour l'analyse discriminante, le test final n'est pas utilise dans cette section. Les modeles sont estimes sur train, compares sur validation, puis le meilleur modele est reestime sur train + validation avant l'evaluation finale dans la partie comparaison.
+Cette partie presente la construction des modeles de regression logistique. L'objectif est double : comparer plusieurs strategies de selection de variables et evaluer l'apport des regularisations ridge, lasso et elastic net. Les modeles sont estimes sur train, comparer sur validation, puis le meilleur modele est reestime sur train + validation avant l'evaluation finale dans la partie comparaison.
 
 ```{r}
 #| label: setup-logistique
@@ -205,8 +235,6 @@ invisible(capture.output(source("scripts/06-logistic.R")))
 ```
 
 ## Strategie de modelisation
-
-La regression logistique modelise directement la probabilite d'annulation d'une reservation. Les variables explicatives retenues dans la base de modelisation sont celles preparees dans `scripts/04-data preparation.R`, ce qui garantit que les modeles logistiques utilisent exactement les memes observations que l'analyse discriminante.
 
 Deux familles de modeles ont ete comparees. La premiere famille regroupe les regressions logistiques classiques avec differentes methodes de selection : modele complet, selection backward, selection forward et selection stepwise. Ces modeles sont compares notamment par leur AIC et par leurs performances sur validation.
 
@@ -231,7 +259,7 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -278,10 +306,11 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
+
 ```
 
 ```{r}
@@ -308,6 +337,7 @@ logistic_validation_metrics |>
   ) +
   theme_minimal(base_size = 12) +
   theme(legend.position = "bottom")
+
 ```
 
 Les resultats montrent que les modeles logistiques classiques et penalises sont proches. Dans notre execution, le modele retenu automatiquement est `r logistic_models_recap$selected_model`, avec un seuil de `r round(logistic_models_recap$selected_threshold, 2)`. Ce choix est effectue sur validation et non sur test.
@@ -336,10 +366,11 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
+
 ```
 
 ## Choix du seuil de classification
@@ -414,7 +445,7 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -470,7 +501,7 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -529,130 +560,151 @@ En synthese, la regression logistique fournit une reference predictive solide et
 
 \newpage
 
+\floatplacement{table}{H}
+
 # Résultats de la deuxième méthode : analyse discriminante sur variables qualitatives
 
-Cette partie présente l'application de la méthode DISQUAL à notre problème de prédiction des annulations. L'idée générale consiste à transformer les variables qualitatives en axes factoriels continus à l'aide d'une ACM, puis à utiliser ces axes comme variables explicatives dans des modèles de classification. Nous comparons ici trois classifieurs construits sur les axes ACM : la LDA, la QDA et le KNN.
+Cette partie présente l'application de la méthode DISQUAL à notre problème de prédiction des annulations. L'idée générale consiste à transformer les variables qualitatives en axes factoriels continus à l'aide d'une ACM, puis à utiliser ces axes comme variables explicatives dans des modèles de classification. Nous comparerons donc trois modéles construits sur les axes ACM : la LDA, la QDA et le KNN.
 
-```{r}
-#| label: setup-analyse-discriminante
-#| include: false
-invisible(capture.output(source("scripts/05-Analyse Discriminante.R")))
-```
+## Stratégie de modélisation
 
-## Stratégie méthodologique
-
-L'analyse discriminante a été construite dans une logique strictement prédictive. La base a d'abord été séparée en trois échantillons : train, validation et test. La base train sert à apprendre la représentation factorielle et les modèles ; la base validation sert à choisir le nombre d'axes, le type de modèle et le seuil de classification ; la base test reste réservée à l'évaluation finale.
+L'analyse discriminante sera construite dans une logique strictement prédictive. Comme pour le modéle logistic Les mêmes bases : train, validation et test ont été utilisées. La base train sert à apprendre la représentation factorielle et les modèles ; la base validation sert à choisir le meilleur modéle et le nombre d'axes optimum pour la prédiction, le type de modèle et le seuil de classification ; la base test reste réservée à l'évaluation finale.
 
 Une attention particulière a été portée au risque de fuite d'information. Pour la phase de sélection, l'ACM est estimée uniquement sur la base train. Les individus de validation et de test sont ensuite projetés comme individus supplémentaires. Ainsi, la structure factorielle utilisée pour sélectionner le modèle ne dépend pas des observations de validation ni de test.
 
-La sélection du modèle se fait en deux temps. Premièrement, on compare plusieurs nombres d'axes ACM et plusieurs modèles à partir de l'AUC sur validation. L'AUC est utilisée à cette étape car elle évalue la capacité de séparation du modèle indépendamment d'un seuil de classification particulier. Deuxièmement, une fois le meilleur couple modèle / nombre d'axes retenu, le seuil de classification est optimisé sur validation, principalement à partir du F1-score afin de mieux équilibrer précision et rappel sur la classe des réservations annulées.
+La sélection du modèle se fait en deux temps. Premièrement, on compare plusieurs nombres d'axes ACM et plusieurs modèles à partir de l'AUC sur validation. L'AUC est utilisée à cette étape car elle évalue la capacité de séparation du modèle indépendamment d'un seuil de classification particulier. 
 
-Après cette sélection, le modèle final est réestimé en utilisant train + validation comme échantillon actif pour l'ACM finale. La base test est alors projetée en individu supplémentaire, puis utilisée une seule fois pour mesurer la performance finale. Cette stratégie permet d'utiliser davantage de données pour le modèle final tout en conservant une évaluation honnête sur test.
+Deuxièmement, une fois le meilleur couple modèle / nombre d'axes retenu, le seuil de classification est optimisé sur validation, principalement à partir du F1-score afin de mieux équilibrer précision et rappel sur la classe des réservations annulées.
+
+Après cette sélection, le modèle final est recalibré en utilisant train + validation pour l'ACM finale. La base test est alors projetée en individu supplémentaire, puis utilisée une seule fois pour mesurer la performance finale. Cette stratégie permet d'utiliser d'avantage de données pour le modèle final tout en conservant une évaluation précise et stricte sur la base test.
+
+## Construction de l'ACM et interpretation des axes
 
 ```{r}
-#| label: tbl-methodologie-discriminante
-#| tbl-cap: "Synthèse de la stratégie retenue pour l'analyse discriminante"
-knitr::kable(
-  discriminant_method_recap,
-  format = "latex",
-  booktabs = TRUE,
-  row.names = FALSE,
-  digits = 4,
-  col.names = c(
-    "Modèle retenu",
-    "Axes retenus",
-    "k KNN",
-    "Seuil",
-    "Axes disponibles",
-    "Max axes testés",
-    "Max k testé",
-    "Base de sélection",
-    "Base active finale",
-    "Rôle du test"
-  )
-) |>
-  kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
-    full_width = FALSE,
-    font_size = 7
+#| label: setup-acm-axes-validation
+#| include: false
+
+# Section autonome : elle recharge l'ACM de selection, la cible en
+# variable supplementaire et les objets d'interpretation des axes.
+invisible(capture.output(source("scripts/05-Analyse Discriminante.R")))
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+
+theme_acm <- theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", size = 13),
+    plot.subtitle = element_text(size = 10),
+    panel.grid.minor = element_blank()
   )
 ```
+
+
+### Role de l'ACM dans la methode DISQUAL
+
+L'analyse des correspondances multiples (ACM) est l'etape qui transforme les variables qualitatives en axes factoriels continus. Dans notre cas, les variables explicatives sont des profils de reservation : type d'hotel, segment de marche, type de client, delai de reservation, duree du sejour, niveau de prix, presence d'enfants, engagement, historique d'annulation, saison touristique et origine du client.
+
+L'ACM permet donc de passer d'une lecture variable par variable a une lecture en **profils**. Chaque axe oppose des combinaisons de modalites. 
+<!-- Un individu positionne du cote positif d'un axe partage davantage les modalites positives de cet axe ; un individu positionne du cote negatif partage davantage les modalites negatives. -->
+
+<!-- Dans une logique predictive, l'ACM est estimee uniquement sur la base d'entrainement. Les bases validation et test sont projetees comme individus supplementaires. Cette strategie evite toute fuite d'information : les axes utilises pour selectionner les modeles ne sont pas construits avec les donnees de validation ou de test. -->
+
+La variable cible `is_canceled` est ajoutee comme variable qualitative supplementaire. Elle ne participe donc pas a la construction des axes, mais elle est projetee sur ces axes pour verifier si les profils factoriels sont lies au risque d'annulation. 
+
+\FloatBarrier
+
+### Inertie des axes factoriels
+
+L'inertie indique la part de structure du tableau disjonctif expliquee par chaque axe.
+L'inertie expliquée par les 5 premiers axes (33%) est representée dans le tableau ci dessous.
+
+```{r}
+#| label: tbl-acm-eigenvalues-validation
+#| tbl-cap: "Inertie des premiers axes de l'ACM"
+acm_axis_interpretation$eigenvalues |>
+  dplyr::mutate(
+    inertia_percent = round(inertia_percent, 2),
+    cumulative_inertia_percent = round(cumulative_inertia_percent, 2)
+  ) |>
+  knitr::kable(
+    format = "latex",
+    booktabs = TRUE,
+    row.names = FALSE,
+    col.names = c("Axe", "Valeur propre", "Inertie (%)", "Inertie cumulee (%)")
+  ) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 8
+  )
+```
+
+On note que nous avons 26 axes au total.
+En annexe, la représentation de l'inertie de l'ensemble des axes dans la figure @fig-acm-scree-all
+
+\FloatBarrier
+
+
+### Représentation et interpretation des axes
+
+L'interpretation des axes combine quatre elements :
+
+- l'inertie de l'axe ;
+- les modalites les plus contributives ;
+- les modalites les mieux representees ;
+- la position de la cible `is_canceled` projetee en supplementaire.
+
+La représentation graphique suivantes affichent les modalites les plus contributives sur les deux premiers axes factoriels. Les libelles utilisent la forme `variable = modalite`. La cible est ajoutee en bleu comme variable supplementaire. Ainsi, le graphique montre a la fois la structure des profils et la position descriptive de l'annulation.
+
+```{r}
+#| label: fig-acm-plane-12-validation
+#| fig-cap: "Plan factoriel 1-2 avec modalites labellisees"
+#| fig-width: 8
+#| fig-height: 6
+#| fig-pos: "H"
+plot_mca_modalities_labeled(c(1, 2), top_n = 30)
+```
+
+
+Nous pouvons ainsi interpréter précisément les axes obtenus:
+
+#### Axe 1 : engagement apparent contre risque historique et canal de reservation
+
+Le pole negatif de l'axe 1 regroupe notamment has_children = Oui, adr_cat = q4_high et engagement_cat = fort. Il correspond a des reservations qui semblent plus engagees : presence d'enfants, niveau de prix eleve et signaux comportementaux traduisant une implication plus forte dans le sejour.
+
+Le pole positif regroupe previous_cancellations_cat = Une_ou_plus, market_segment = Other et market_segment = Corporate, avec une forte contribution de market_segment = Online_TA. Ce pole renvoie a des profils ou le canal, le segment et l'historique d'annulation jouent un role plus important.
+
+Interpretation metier : l'axe 1 oppose des reservations a engagement apparent fort a des reservations plus marquees par un risque historique ou commercial. Le fait que is_canceled_Oui soit projete du cote positif indique que les annulations sont descriptivement plus proches des profils ayant deja annule ou appartenant a certains segments/canaux.
+
+#### Axe 2 : temporalite de reservation et mode de commercialisation
+
+L'axe 2 oppose customer_type = Contract, market_segment = Offline_TA et lead_time_cat = tres_long a lead_time_cat = derniere_minute, market_segment = Corporate et customer_type = Group. Les contributions les plus fortes viennent des categories de delai de reservation.
+
+Interpretation metier : cet axe decrit principalement la temporalite de decision. Les reservations tres anticipees ou intermediees par des canaux offline ne renvoient pas aux memes comportements que les reservations de derniere minute ou corporate. Le risque d'annulation depend ici de la combinaison entre delai, canal et type de client.
+
+Une representation des autres axes 3,4 et 5 est en annexe @fig-acm-plane-34-validation et @fig-acm-plane-15-validation ainsi que des modalités structurantes sur chaque axe sur @fig-acm-contrib-validation
+
+\FloatBarrier
 
 ## Tests statistiques sur les axes de l'ACM
 
-Avant de lancer la grid search, nous verifions les hypotheses statistiques associees aux axes factoriels issus de l'ACM. Ces tests sont realises sur les axes candidats construits a partir de la base d'entrainement, avant le choix final du nombre d'axes. Cette position est importante : les diagnostics portent sur la representation factorielle disponible, puis la selection predictive decide ensuite combien d'axes conserver.
+Avant la grid search, nous évaluons les hypothèses statistiques associées aux axes factoriels issus de l’ACM, construits uniquement sur la base d’entraînement. Cette étape permet de vérifier dans quelle mesure les axes utilisés comme variables explicatives sont compatibles avec les hypothèses de l’analyse discriminante.
 
-La LDA suppose une normalite multivariee des variables explicatives dans les groupes et une homogeneite des matrices de covariance entre les classes. La QDA relache l'hypothese d'homogeneite des covariances, mais reste plus stable lorsque les axes utilises ne s'eloignent pas trop fortement d'une structure gaussienne. Ces tests ne decident donc pas seuls du modele final : ils servent a evaluer la pertinence statistique des hypotheses, en complement des performances observees sur validation et test.
+La normalité est étudiée à deux niveaux : axe par axe avec le test de Shapiro-Wilk, puis globalement avec les tests multivariés de Mardia et de Henze-Zirkler. L’homogénéité des matrices de covariance entre les deux classes de `is_canceled` est vérifiée avec le test de Box’s M. Les résultats détaillés de ces diagnostics sont présentés dans les tableaux @tbl-shapiro-axes-acm, @tbl-normalite-multivariee-acm et @tbl-box-m-acm.
 
-```{r}
-#| label: tbl-shapiro-axes-acm
-#| tbl-cap: "Tests de Shapiro-Wilk sur les axes ACM candidats"
-knitr::kable(
-  shapiro_axes_results,
-  format = "latex",
-  booktabs = TRUE,
-  row.names = FALSE,
-  digits = 4,
-  col.names = c("Axe", "Statistique", "p-value", "Conclusion")
-) |>
-  kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
-    full_width = FALSE,
-    font_size = 7
-  )
-```
+Ces tests ne déterminent pas directement le modèle final, mais ils éclairent la validité théorique de la LDA et de la QDA. Si la normalité ou l’homogénéité des covariances sont rejetées, les modèles restent utilisables comme classifieurs prédictifs, mais leur interprétation probabiliste doit être nuancée. Le choix final repose donc principalement sur la performance observée en validation, via la sélection du nombre d’axes, du modéle et du seuil de classification.
 
-```{r}
-#| label: tbl-normalite-multivariee-acm
-#| tbl-cap: "Tests de normalite multivariee sur les axes ACM candidats"
-normality_multivariate_table <- dplyr::bind_rows(
-  mardia_test_table,
-  henze_zirkler_test_table
-) |>
-  dplyr::mutate(
-    MVN = stringr::str_replace_all(MVN, "✗ Not normal", "Non normale"),
-    MVN = stringr::str_replace_all(MVN, "✓ Normal", "Normale")
-  )
-
-knitr::kable(
-  normality_multivariate_table,
-  format = "latex",
-  booktabs = TRUE,
-  row.names = FALSE,
-  digits = 4
-) |>
-  kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
-    full_width = FALSE,
-    font_size = 7
-  )
-```
-
-```{r}
-#| label: tbl-box-m-acm
-#| tbl-cap: "Test de Box M pour l'homogeneite des matrices de covariance"
-knitr::kable(
-  box_m_test_table,
-  format = "latex",
-  booktabs = TRUE,
-  row.names = FALSE,
-  digits = 4,
-  col.names = c("Test", "Statistique", "Degres de liberte", "p-value", "Conclusion")
-) |>
-  kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
-    full_width = FALSE,
-    font_size = 7
-  )
-```
-
-Lorsque les tests de normalite sont rejetes, l'utilisation de la LDA et de la QDA doit etre interpretee avec prudence : ces methodes restent utilisables comme classifieurs, mais leur justification probabiliste stricte est affaiblie. Lorsque le test de Box M rejette l'homogeneite des matrices de covariance, la QDA devient theoriquement plus flexible que la LDA, mais elle peut aussi etre plus instable si le nombre d'axes est trop eleve. C'est pourquoi le choix final du modele repose sur une validation empirique du nombre d'axes, du type de classifieur et du seuil de classification.
-
-## Choix du nombre d'axes et du classifieur
+## Choix du meilleur modéle et du nombre d'axes optimum
 
 Le nombre d'axes ACM ne doit pas être choisi uniquement à partir de l'inertie factorielle. Dans notre cadre, l'objectif est prédictif : nous cherchons le nombre d'axes qui améliore réellement la capacité à distinguer les réservations annulées des réservations non annulées. Pour cette raison, une grille de recherche est appliquée sur la base validation.
 
-La grille compare plusieurs nombres d'axes pour la LDA, la QDA et le KNN. Pour le KNN, plusieurs valeurs de `k` sont aussi testées. Ce paramètre correspond au nombre de voisins utilisés pour classer une réservation : une petite valeur de `k` donne un modèle plus local et potentiellement plus instable, tandis qu'une grande valeur lisse davantage la décision mais peut perdre des profils spécifiques.
+La grille compare plusieurs nombres d'axes pour la LDA, la QDA et le KNN. Pour le KNN, plusieurs valeurs de `k` sont aussi testées. Ce paramètre correspond au nombre de voisins utilisés pour classer une réservation.
+
+En voici un tableau récapitulatif:
 
 ```{r}
 #| label: tbl-grid-modeles-discriminants
@@ -694,23 +746,12 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
 ```
 
-```{r}
-#| label: fig-grid-auc-discriminante
-#| fig-cap: "AUC de validation selon le nombre d'axes ACM et le modèle"
-plot_discriminant_grid_auc
-```
-
-```{r}
-#| label: fig-grid-f1-discriminante
-#| fig-cap: "F1-score de validation selon le nombre d'axes ACM et le modèle"
-plot_discriminant_grid_f1
-```
 
 ```{r}
 #| label: tbl-grid-knn-discriminante
@@ -729,25 +770,122 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
 ```
 
-Au regard des résultats de validation, le modèle retenu est celui qui présente la meilleure AUC, puis le meilleur F1-score en cas de performances proches. Dans notre cas, la sélection retient le modèle `r discriminant_method_recap$selected_model`, avec `r discriminant_method_recap$selected_n_axes` axes ACM. Pour le KNN, la valeur retenue est `k = r discriminant_method_recap$selected_knn_k`.
+\FloatBarrier
+
+Une première lecture des résultats de validation conduirait à retenir directement le modèle présentant la meilleure AUC dans le Tableau en annexe @tbl-auc-validation-axes. Dans notre cas, il s'agit du modèle KNN avec `k = 15` et 26 axes ACM. Toutefois, notre objectif n'est pas uniquement de maximiser la performance apparente sur validation : nous cherchons aussi à conserver un modèle parcimonieux, plus stable et moins exposé au risque de sur-ajustement. Nous examinons donc plus finement les gains marginaux d'AUC associés à l'ajout progressif d'axes factoriels. Cette analyse montre que le passage de 15 à 26 axes améliore très peu l'AUC, alors qu'il augmente sensiblement la complexité du modèle. Nous retenons donc le modèle KNN avec `k = 15` et 15 axes ACM comme compromis entre précision prédictive, stabilité et parcimonie.
+
+```{r}
+#| label: tbl-gains-marginaux-auc-knn
+#| tbl-cap: "Gains marginaux d'AUC selon le nombre d'axes pour le KNN retenu"
+
+auc_gain_marginal_table <- results_validation |>
+  dplyr::filter(
+    model == "ACM + KNN",
+    knn_k == best_discriminant_knn_k,
+    !is.na(auc)
+  ) |>
+  dplyr::arrange(n_axes) |>
+  dplyr::mutate(
+    best_auc = max(auc, na.rm = TRUE),
+    auc_reference = auc[n_axes == 15][1],
+    gain_vs_previous = auc - dplyr::lag(auc),
+    gain_vs_reference = auc - auc_reference,
+    gap_to_best = best_auc - auc,
+    interpretation = dplyr::case_when(
+      n_axes < 15 ~ "Gain encore utile",
+      n_axes == 15 ~ "Choix retenu",
+      n_axes > 15 & gap_to_best <= 0.01 ~ "Gain marginal faible",
+      TRUE ~ "Gain à discuter"
+    )
+  ) |>
+  dplyr::select(
+    n_axes,
+    knn_k,
+    auc,
+    gain_vs_previous,
+    gain_vs_reference,
+    gap_to_best,
+    interpretation
+  )
+
+auc_gain_marginal_table_report <- auc_gain_marginal_table |>
+  dplyr::mutate(
+    auc = round(auc, 4),
+    gain_vs_previous = round(gain_vs_previous, 4),
+    gain_vs_reference = round(gain_vs_reference, 4),
+    gap_to_best = round(gap_to_best, 4)
+  ) |>
+  dplyr::rename(
+    "Nombre d'axes" = n_axes,
+    "k KNN" = knn_k,
+    "AUC" = auc,
+    "Gain vs étape précédente" = gain_vs_previous,
+    "Gain vs 15 axes" = gain_vs_reference,
+    "Écart au meilleur" = gap_to_best,
+    "Lecture" = interpretation
+  )
+
+selected_row <- which(auc_gain_marginal_table_report[["Nombre d'axes"]] == 15)
+
+table_gains_marginaux <- knitr::kable(
+  auc_gain_marginal_table_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  escape = FALSE
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  )
+
+if (length(selected_row) > 0) {
+  table_gains_marginaux <- table_gains_marginaux |>
+    kableExtra::row_spec(
+      selected_row,
+      background = "#DFF2BF",
+      bold = TRUE
+    )
+}
+
+table_gains_marginaux
+```
+
+\FloatBarrier
+
+<!-- Au regard des résultats de validation, le modèle retenu est celui qui présente la meilleure AUC, puis le meilleur F1-score en cas de performances proches. Dans notre cas, la sélection retient le modèle `r discriminant_method_recap$selected_model`, avec `r discriminant_method_recap$selected_n_axes` axes ACM. Pour le KNN, la valeur retenue est `k = r discriminant_method_recap$selected_knn_k`. -->
+
+Une représentation graphique de l'evolution de l'AUC @fig-grid-auc-discriminante et du F1 score @fig-grid-f1-discriminante par modéle est disponible en annexe
+
 
 ## Choix du seuil de classification
 
-Les modèles produisent une probabilité ou un score associé à la modalité "Oui" de `is_canceled`. Le seuil par défaut de 0,50 n'est pas forcément optimal, surtout lorsque l'objectif est de détecter les annulations. Nous avons donc optimisé le seuil sur la base validation après avoir choisi le modèle et le nombre d'axes.
+Après le choix du modèle discriminant parcimonieux, défini par le KNN avec `k = 15` et 15 axes ACM, nous procédons à l’optimisation du seuil de classification. En effet, le modèle produit un score associé à la modalité `is_canceled = Oui`, mais le seuil usuel de 0,50 n’est pas nécessairement optimal, en particulier lorsque l’objectif est d’améliorer la détection des annulations.
 
-Le critère principal retenu est le F1-score. Ce choix est cohérent avec l'objectif métier : il faut repérer un maximum d'annulations tout en évitant de générer trop de fausses alertes. Le seuil retenu est `r round(discriminant_method_recap$selected_threshold, 2)`.
+Nous réalisons donc une grid search du seuil sur la base validation, en testant une grille de valeurs comprises entre 0,10 et 0,90. Pour chaque seuil candidat, les observations sont classées en `Oui` ou `Non`, puis les indicateurs de performance sont recalculés. Le critère principal retenu est le F1-score, car il permet d’arbitrer entre le rappel, c’est-à-dire la capacité à détecter les annulations, et la précision, c’est-à-dire la limitation des fausses alertes. Le seuil finalement retenu est `r round(discriminant_method_recap$selected_threshold, 2)`.
+
 
 ```{r}
 #| label: tbl-seuil-discriminant
-#| tbl-cap: "Seuil de classification retenu sur validation"
+#| tbl-cap: "Seuil de classification retenu sur validation pour le modèle discriminant parcimonieux"
+
 threshold_best_report <- threshold_discriminant$best_f1 |>
+  dplyr::mutate(
+    model = best_discriminant_model,
+    n_axes = best_discriminant_n_axes,
+    knn_k = best_discriminant_knn_k
+  ) |>
   dplyr::select(
+    model,
+    n_axes,
+    knn_k,
     threshold,
     accuracy,
     sensitivity_recall,
@@ -764,6 +902,9 @@ knitr::kable(
   row.names = FALSE,
   digits = 4,
   col.names = c(
+    "Modèle",
+    "Axes ACM",
+    "k KNN",
     "Seuil",
     "Accuracy",
     "Recall",
@@ -774,13 +915,18 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
 ```
 
+\FloatBarrier
+
+
 \newpage
+
+\floatplacement{table}{htbp}
 
 # Comparaison des résultats et conclusion
 
@@ -962,24 +1108,9 @@ final_bivariate_plot_all
 HEATMAP_CRAMER
 ```
 
-```{r}
-#| label: tbl-variables-modelisation
-#| tbl-cap: "Variables retenues pour la modélisation logistique"
-knitr::kable(
-  table_variables_modelisation,
-  format = "latex",
-  booktabs = TRUE,
-  row.names = FALSE,
-  col.names = c("Variable", "Rôle dans l'analyse")
-) |>
-  kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
-    full_width = FALSE,
-    font_size = 8
-  ) |>
-  kableExtra::column_spec(1, width = "4.2cm") |>
-  kableExtra::column_spec(2, width = "7.5cm")
-```
+## Objectif de l'étude et démarche choisie
+
+![Démarche de modélisation](assets/decoupage_demarche.png){#fig-schema width="80%"}
 
 ```{r}
 #| label: tbl-cleaning-recap
@@ -1001,3 +1132,286 @@ knitr::kable(
   kableExtra::column_spec(3, width = "2.5cm") |>
   kableExtra::column_spec(4, width = "2.0cm")
 ```
+
+## Annexe - Analyse discriminante sur variables qualitatives
+
+\floatplacement{table}{H}
+
+### Inertie des axes factoriels
+
+```{r}
+#| label: fig-acm-scree-all
+#| fig-cap: "Décroissance de l'inertie de l'ensemble des axes ACM"
+#| fig-width: 7.5
+#| fig-height: 4.5
+#| fig-pos: "H"
+
+eig_all_axes <- as.data.frame(res_mca_train$eig) |>
+  tibble::rownames_to_column("axis")
+
+names(eig_all_axes)[seq_len(min(4, ncol(eig_all_axes)))] <- c(
+  "axis",
+  "eigenvalue",
+  "inertia_percent",
+  "cumulative_inertia_percent"
+)[seq_len(min(4, ncol(eig_all_axes)))]
+
+eig_all_axes |>
+  ggplot(aes(x = factor(axis, levels = axis), y = inertia_percent)) +
+  geom_col(fill = "#C9002B", width = 0.7) +
+  geom_text(
+    aes(label = paste0(round(inertia_percent, 1), "%")),
+    vjust = -0.35,
+    size = 2.6
+  ) +
+  labs(
+    title = "Inertie portée par l'ensemble des axes ACM",
+    subtitle = "La décroissance de l'inertie aide à apprécier l'apport progressif des axes factoriels",
+    x = "Axe factoriel",
+    y = "Inertie expliquée (%)"
+  ) +
+  theme_acm +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+\FloatBarrier
+
+### Représentation et interpretation des axes
+
+```{r}
+#| label: fig-acm-plane-34-validation
+#| fig-cap: "Plan factoriel 3-4 avec modalites labellisees"
+#| fig-width: 7.5
+#| fig-height: 5.4
+#| fig-pos: "H"
+plot_mca_modalities_labeled(c(3, 4), top_n = 30)
+```
+
+#### Axe 3 : nature du sejour et saisonnalite
+
+L'axe 3 oppose des profils market_segment = Corporate, identity_location = Other_International et saison_tourisme = basse_saison a des profils customer_type = Contract, total_nights_cat = long_sejour et hotel = Resort Hotel.
+
+Interpretation metier : cet axe distingue une logique plus professionnelle/internationale ou basse saison d'une logique plus touristique, resort et long sejour. Il structure donc les motivations probables du sejour. Cette distinction est importante car une reservation business, un sejour resort et un long sejour ne portent pas les memes contraintes d'annulation.
+
+#### Axe 4 : volatilite operationnelle autour du sejour
+
+L'axe 4 oppose customer_type = Group, total_nights_cat = long_sejour et customer_type = Contract a previous_cancellations_cat = Une_ou_plus, has_children = Oui et lead_time_cat = derniere_minute. Les contributions de adr_cat = q4_high, saison_tourisme = basse_saison, saison_tourisme = pick_saison, total_nights_cat = court_sejour et hotel = Resort Hotel montrent que cet axe combine prix, saison et structure du sejour.
+
+Interpretation metier : cet axe capte une forme de volatilite operationnelle. Les reservations courtes, cheres, saisonnieres ou associees a un historique d'annulation peuvent etre plus difficiles a stabiliser. La position de `is_canceled_Oui` sur cet axe confirme que cette dimension contient une information pertinente pour la prediction.
+
+\FloatBarrier
+
+```{r}
+#| label: fig-acm-plane-15-validation
+#| fig-cap: "Plan factoriel 1-5 avec modalites labellisees"
+#| fig-width: 7.5
+#| fig-height: 5.4
+#| fig-pos: "H"
+plot_mca_modalities_labeled(c(1, 5), top_n = 30)
+```
+
+#### Axe 5 : canal, prix et saison
+
+L'axe 5 oppose market_segment = Other, engagement_cat = fort et has_children = Oui a customer_type = Group, customer_type = Contract et lead_time_cat = derniere_minute. Les contributions de market_segment = Other, market_segment = Offline_TA, adr_cat = q3_midhigh, saison_tourisme = haute_saison et lead_time_cat = derniere_minute indiquent que cet axe combine canal, niveau de prix et saison.
+
+Interpretation metier : cet axe affine la lecture du risque en distinguant des profils commerciaux et saisonniers. Il ne represente pas un seul facteur simple, mais une combinaison de contexte de reservation, de prix et de periode touristique.
+
+\FloatBarrier
+
+```{r}
+#| label: fig-acm-contrib-validation
+#| fig-cap: "Modalites les plus contributives aux premiers axes"
+#| fig-width: 7.5
+#| fig-height: 7.2
+#| fig-pos: "H"
+top_contrib_plot <- acm_axis_interpretation$axis_details |>
+  dplyr::select(axis, top_contributions) |>
+  tidyr::unnest(top_contributions) |>
+  dplyr::group_by(axis) |>
+  dplyr::slice_max(contribution, n = 6) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    label_wrapped = stringr::str_wrap(modality_label, width = 28),
+    label_axis = paste(axis, label_wrapped, sep = "___")
+  ) |>
+  dplyr::group_by(axis) |>
+  dplyr::mutate(
+    label_axis = forcats::fct_reorder(label_axis, contribution)
+  ) |>
+  dplyr::ungroup()
+
+acm_axis_interpretation$axis_details |>
+  invisible()
+
+ggplot(top_contrib_plot, aes(x = contribution, y = label_axis, fill = axis)) +
+  geom_col(width = 0.7, show.legend = FALSE) +
+  facet_wrap(~axis, scales = "free_y", ncol = 2) +
+  scale_y_discrete(labels = \(x) stringr::str_remove(x, "^Dim [0-9]+___")) +
+  labs(
+    title = "Modalites structurantes des axes ACM",
+    x = "Contribution a l'axe",
+    y = NULL
+  ) +
+  theme_acm +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.text.y = element_text(size = 8)
+  )
+```
+
+Les contributions indiquent quelles modalites construisent vraiment chaque axe. Une modalite peut etre eloignee du centre sans etre la plus structurante ; inversement, une modalite fortement contributive doit etre integree a l'interpretation de l'axe.
+
+\FloatBarrier
+
+### Tests statistiques sur les axes de l'ACM
+
+```{r}
+#| label: tbl-shapiro-axes-acm
+#| tbl-cap: "Tests de Shapiro-Wilk sur les axes ACM candidats"
+knitr::kable(
+  shapiro_axes_results,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c("Axe", "Statistique", "p-value", "Conclusion")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: tbl-normalite-multivariee-acm
+#| tbl-cap: "Tests de normalite multivariee sur les axes ACM candidats"
+normality_multivariate_table <- dplyr::bind_rows(
+  mardia_test_table,
+  henze_zirkler_test_table
+) |>
+  dplyr::mutate(
+    MVN = stringr::str_replace_all(MVN, "✗ Not normal", "Non normale"),
+    MVN = stringr::str_replace_all(MVN, "✓ Normal", "Normale")
+  )
+
+knitr::kable(
+  normality_multivariate_table,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: tbl-box-m-acm
+#| tbl-cap: "Test de Box M pour l'homogeneite des matrices de covariance"
+knitr::kable(
+  box_m_test_table,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c("Test", "Statistique", "Degres de liberte", "p-value", "Conclusion")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+\FloatBarrier
+
+### Choix du nombre d'axes et du classifieur
+```{r}
+#| label: tbl-auc-validation-axes
+#| tbl-cap: "AUC de validation selon le nombre d'axes ACM et le modèle"
+
+auc_columns_order <- c(
+  "n_axes",
+  "ACM + LDA",
+  "ACM + QDA",
+  "ACM + KNN k=5",
+  "ACM + KNN k=15",
+  "ACM + KNN k=26"
+)
+
+auc_table_raw <- results_validation_auc_wide |>
+  dplyr::select(dplyr::any_of(auc_columns_order))
+
+auc_model_columns <- setdiff(names(auc_table_raw), "n_axes")
+
+max_auc_value <- auc_table_raw |>
+  dplyr::select(dplyr::all_of(auc_model_columns)) |>
+  as.matrix() |>
+  max(na.rm = TRUE)
+
+auc_table_report <- auc_table_raw |>
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::all_of(auc_model_columns),
+      ~ dplyr::if_else(
+        .x == max_auc_value,
+        kableExtra::cell_spec(
+          round(.x, 4),
+          format = "latex",
+          background = "#F4B183",
+          bold = TRUE
+        ),
+        as.character(round(.x, 4))
+      )
+    ),
+    n_axes = as.character(n_axes)
+  )
+
+auc_col_names <- c(
+  "Nombre d'axes",
+  "LDA",
+  "QDA",
+  "KNN k = 5",
+  "KNN k = 15",
+  "KNN k = 26"
+)[seq_along(auc_table_report)]
+
+knitr::kable(
+  auc_table_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  escape = FALSE,
+  col.names = auc_col_names
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 8
+  )
+```
+
+```{r}
+#| label: fig-grid-auc-discriminante
+#| fig-cap: "AUC de validation selon le nombre d'axes ACM et le modèle"
+#| fig-width: 7.5
+#| fig-height: 4.8
+#| fig-pos: "H"
+plot_discriminant_grid_auc
+```
+
+```{r}
+#| label: fig-grid-f1-discriminante
+#| fig-cap: "F1-score de validation selon le nombre d'axes ACM et le modèle"
+#| fig-width: 7.5
+#| fig-height: 4.8
+#| fig-pos: "H"
+plot_discriminant_grid_f1
+```
+\FloatBarrier

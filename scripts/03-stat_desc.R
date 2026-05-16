@@ -280,13 +280,14 @@ p11 <- plot_univariate(df_desc, "engagement_cat", "Engagement client")
 p12 <- plot_univariate(df_desc, "previous_cancellations_cat", "Historique d'annulation")
 p13  <- plot_univariate(df_desc,  "identity_location")
                  
-final_univariate_plot <-
+final_univariate_plot <- (
   (p1 | p2) /
-  # (p3 | p4) /
-  # (p5 | p6) /
-  # (p7 | p8) /
-  # (p9 | p10) /
-  (p11 | p12) +
+    # (p3 | p4) /
+    # (p5 | p6) /
+    # (p7 | p8) /
+    # (p9 | p10) /
+    (p11 | p12)
+) +
   plot_annotation(
     title = "Distribution des variables explicatives",
     theme = theme(
@@ -344,13 +345,14 @@ table_uni_previous
 (b12 <- plot_bivariate(df_desc, "previous_cancellations_cat", "Historique d'annulation"))
 (b13 =plot_bivariate(df_desc,"identity_location"))
 
-final_bivariate_plot <-
+final_bivariate_plot <- (
   # (b1 | b2) /
-  # (b13 | b4) /
-  # (b5 | b6) /
-  # (b7 | b8) /
-  # (b9 | b10) /
-  (b6 | b11) +
+    # (b13 | b4) /
+    # (b5 | b6) /
+    # (b7 | b8) /
+    # (b9 | b10) /
+    (b6 | b11)
+) +
   plot_annotation(
     title = "Répartition des annulations selon les variables explicatives",
     theme = theme(
@@ -360,15 +362,14 @@ final_bivariate_plot <-
 
 final_bivariate_plot
 
-final_bivariate_plot_all <-
+final_bivariate_plot_all <- (
   # (b1 | b2) /
-  # (b13 | b4) /
-  # (b5 | b6) /
-  
-  (b2 | b12)/
-   (b13 | b5) /
-  (b9 | b8) 
-   +
+    # (b13 | b4) /
+    # (b5 | b6) /
+    (b2 | b12) /
+    (b13 | b5) /
+    (b9 | b8)
+) +
   plot_annotation(
     title = "Répartition des annulations selon les variables explicatives",
     theme = theme(
