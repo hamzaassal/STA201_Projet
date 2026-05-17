@@ -50,6 +50,54 @@ Les scripts sont numerotes afin d'indiquer leur ordre logique d'execution.
 7. `06-logistic.R` construit les modeles de regression logistique, selectionne les variables et choisit les seuils sur validation.
 8. `07- Comparaison.R` centralise les tests, les evaluations finales sur l'echantillon test et la comparaison entre methodes.
 
+## Cloner le projet
+
+### 1. Installer Git
+
+Si Git n'est pas encore installe sur votre machine :
+
+- **Windows** : telechargez l'installateur sur [git-scm.com](https://git-scm.com/download/win), lancez-le et conservez les options par defaut.
+- **macOS** : ouvrez le Terminal et tapez `git --version`. Si Git n'est pas present, macOS propose automatiquement de l'installer.
+- **Linux** : `sudo apt install git` (Ubuntu/Debian) ou `sudo dnf install git` (Fedora).
+
+Pour verifier que Git est bien installe, ouvrez un terminal et tapez :
+
+```bash
+git --version
+```
+
+Vous devriez voir quelque chose comme `git version 2.x.x`.
+
+---
+
+### 2. Cloner le depot
+
+"Cloner" signifie telecharger une copie complete du projet sur votre ordinateur.
+
+Ouvrez un terminal (Git Bash sur Windows, Terminal sur macOS/Linux), placez-vous dans le dossier ou vous souhaitez mettre le projet, puis executez :
+
+```bash
+git clone https://github.com/hamzaassal/STA201_Projet.git
+```
+
+Cette commande cree un dossier `STA201_Projet/` contenant tous les fichiers du projet.
+
+Entrez ensuite dans ce dossier :
+
+```bash
+cd STA201_Projet
+```
+
+> **Conseil** : si vous ne savez pas ou vous etes dans le terminal, tapez `pwd` (macOS/Linux) ou `cd` seul (Windows) pour afficher votre emplacement actuel.
+
+---
+
+### 3. Ouvrir le projet dans RStudio
+
+Double-cliquez sur le fichier `STA201_Projet.Rproj` dans votre explorateur de fichiers, ou depuis RStudio : `File > Open Project` puis selectionnez ce fichier.
+
+RStudio charge automatiquement l'environnement du projet et active `renv`.
+
 ## Environnement R reproductible
 
 Le projet utilise `renv` afin de faciliter le partage et la reproduction des resultats.
