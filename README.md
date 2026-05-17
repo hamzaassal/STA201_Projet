@@ -4,7 +4,7 @@ Ce depot contient le travail de projet STA201 portant sur la prediction des annu
 
 ## Architecture du projet
 
-```text
+\`\`\`text
 .
 |-- data/
 |   |-- hotel_bookings.csv
@@ -26,7 +26,7 @@ Ce depot contient le travail de projet STA201 portant sur la prediction des annu
 |-- renv.lock
 |-- .Rprofile
 `-- STA201_Projet.Rproj
-```
+\`\`\`
 
 ## Role des principaux fichiers
 
@@ -50,16 +50,27 @@ Les scripts sont numerotes afin d'indiquer leur ordre logique d'execution.
 7. `06-logistic.R` construit les modeles de regression logistique, selectionne les variables et choisit les seuils sur validation.
 8. `07- Comparaison.R` centralise les tests, les evaluations finales sur l'echantillon test et la comparaison entre methodes.
 
+## Cloner le projet
+
+Assurez-vous d'avoir [Git](https://git-scm.com/) installe, puis executez :
+
+\`\`\`bash
+git clone https://github.com/hamzaassal/STA201_Projet.git
+cd STA201_Projet
+\`\`\`
+
+Ouvrez ensuite le fichier `STA201_Projet.Rproj` dans RStudio pour charger l'environnement du projet.
+
 ## Environnement R reproductible
 
 Le projet utilise `renv` afin de faciliter le partage et la reproduction des resultats.
 
 Sur un nouvel ordinateur, ouvrir le projet puis executer :
 
-```r
+\`\`\`r
 install.packages("renv")
 renv::restore()
-```
+\`\`\`
 
 Cette commande restaure les versions de packages enregistrees dans `renv.lock`.
 
@@ -73,9 +84,9 @@ Les outils systeme suivants restent necessaires en dehors de `renv` :
 
 Le rapport principal est `Rapport_Final.qmd`. Il peut etre rendu depuis RStudio avec le bouton Render, ou en ligne de commande :
 
-```bash
+\`\`\`bash
 quarto render Rapport_Final.qmd --to pdf
-```
+\`\`\`
 
 Le rendu PDF s'appuie sur les scripts du dossier `scripts/`, sur la base `data/hotel_bookings.csv` et sur le logo situe dans `assets/`.
 
