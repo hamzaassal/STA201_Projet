@@ -4,7 +4,7 @@ Ce depot contient le travail de projet STA201 portant sur la prediction des annu
 
 ## Architecture du projet
 
-\`\`\`text
+```text
 .
 |-- data/
 |   |-- hotel_bookings.csv
@@ -26,7 +26,7 @@ Ce depot contient le travail de projet STA201 portant sur la prediction des annu
 |-- renv.lock
 |-- .Rprofile
 `-- STA201_Projet.Rproj
-\`\`\`
+```
 
 ## Role des principaux fichiers
 
