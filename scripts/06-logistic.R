@@ -1,4 +1,4 @@
-source("scripts/04-data preparation.R")
+source("scripts/04-data_preparation.R")
 
 # ============================================================
 # REGRESSION LOGISTIQUE : SELECTION, PENALISATION ET VALIDATION
@@ -6,7 +6,7 @@ source("scripts/04-data preparation.R")
 
 # Methodologie predictive :
 # 1. les bases train / validation / test viennent exclusivement de
-#    scripts/04-data preparation.R, comme pour l'analyse discriminante ;
+#    scripts/04-data_preparation.R, comme pour l'analyse discriminante ;
 # 2. les modeles candidats sont estimes sur train ;
 # 3. le choix du modele et du seuil est fait sur validation ;
 # 4. le modele retenu est reestime sur train + validation ;

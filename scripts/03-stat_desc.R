@@ -118,7 +118,11 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
     group_by(variable) |>
     mutate(
       prop = n / sum(n),
-      label = percent(prop, accuracy = 0.1)
+      label = dplyr::if_else(
+        prop >= 0.06,
+        percent(prop, accuracy = 0.1),
+        ""
+      )
     ) |>
     ungroup()
   
@@ -126,8 +130,7 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
     group_by(variable) |>
     summarise(total_n = sum(n), .groups = "drop") |>
     mutate(
-      total_prop = total_n / sum(total_n),
-      total_label = paste0(percent(total_prop, accuracy = 0.1), " du total")
+      total_prop = total_n / sum(total_n)
     )
   
   variable_levels <- total_data |>
@@ -153,28 +156,15 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
     geom_text(
       aes(label = label),
       position = position_fill(vjust = 0.5),
-      size = 3.4,
+      size = 2.9,
       fontface = "bold",
       color = "white"
     ) +
-    geom_text(
-      data = total_data,
-      aes(
-        x = variable_ordered,
-        y = 1.03,
-        label = total_label
-      ),
-      inherit.aes = FALSE,
-      hjust = 0,
-      size = 3.2,
-      fontface = "bold",
-      color = "grey20"
-    ) +
-    coord_flip() +
+    coord_flip(clip = "off") +
     scale_fill_manual(values = c("Non" = "#1F77B4", "Oui" = "#E76F51")) +
     scale_y_continuous(
       labels = percent_format(),
-      limits = c(0, 1.18),
+      limits = c(0, 1.03),
       expand = expansion(mult = c(0, 0.02))
     ) +
     labs(
@@ -184,7 +174,18 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
       y = "Proportion",
       fill = "Annulation"
     ) +
-    theme_report
+    theme_report +
+    theme(
+      plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 8, hjust = 0.5, color = "grey35"),
+      axis.title.x = element_text(size = 10, face = "bold"),
+      axis.text.x = element_text(size = 8),
+      axis.text.y = element_text(size = 8),
+      legend.position = "bottom",
+      legend.title = element_text(size = 9, face = "bold"),
+      legend.text = element_text(size = 8),
+      plot.margin = margin(5, 8, 5, 5)
+    )
 }
 
 plot_cancel_rate <- function(data, var_name, title_label = NULL) {
@@ -353,12 +354,8 @@ final_bivariate_plot <- (
     # (b9 | b10) /
     (b6 | b11)
 ) +
-  plot_annotation(
-    title = "Répartition des annulations selon les variables explicatives",
-    theme = theme(
-      plot.title = element_text(size = 21, face = "bold", hjust = 0.5)
-    )
-  )
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 
 final_bivariate_plot
 
@@ -370,12 +367,8 @@ final_bivariate_plot_all <- (
     (b13 | b5) /
     (b9 | b8)
 ) +
-  plot_annotation(
-    title = "Répartition des annulations selon les variables explicatives",
-    theme = theme(
-      plot.title = element_text(size = 21, face = "bold", hjust = 0.5)
-    )
-  )
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 final_bivariate_plot_all
 # ============================================================
 # TABLEAUX BIVARIES INDIVIDUELS
@@ -466,7 +459,6 @@ vars_corr <- df_engineered |>
     engagement_cat,
     previous_cancellations_cat,
     saison_tourisme,
-    repeated_guest_cat,
     identity_location
   )
 
@@ -526,33 +518,46 @@ cramer_matrix
 # HEATMAP 
 # ============================================================
 
-HEATMAP_CRAMER=corrplot(
-  cramer_matrix,
-  
-  method = "color",
-  
-  type = "upper",
-  
-  addCoef.col = "black",
-  
-  tl.col = "black",
-  
-  tl.srt = 45,
-  
-  col = colorRampPalette(
-    c(
-      "#F7FBFF",
-      "#6BAED6",
-      "#08306B"
-    )
-  )(200),
-  
-  number.cex = 0.7,
-  
-  mar = c(0, 0, 2, 0),
-  
-  title = "Matrice des associations (V de Cramér)"
-)
+cramer_heatmap_data <- as.data.frame(cramer_matrix) |>
+  tibble::rownames_to_column("var1") |>
+  tidyr::pivot_longer(
+    -var1,
+    names_to = "var2",
+    values_to = "cramer_v"
+  ) |>
+  dplyr::mutate(
+    var1 = factor(var1, levels = rev(rownames(cramer_matrix))),
+    var2 = factor(var2, levels = colnames(cramer_matrix)),
+    label = sprintf("%.2f", cramer_v)
+  )
+
+HEATMAP_CRAMER <- ggplot(cramer_heatmap_data, aes(x = var2, y = var1, fill = cramer_v)) +
+  geom_tile(color = "white", linewidth = 0.35) +
+  geom_text(aes(label = label), size = 2.4, color = "black") +
+  scale_fill_gradient(
+    low = "#F7FBFF",
+    high = "#08306B",
+    limits = c(0, 1),
+    name = "V de Cramér"
+  ) +
+  coord_fixed() +
+  labs(
+    title = "Matrice des associations entre variables qualitatives",
+    subtitle = "Intensité mesurée par le V de Cramér",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 13),
+    plot.subtitle = element_text(hjust = 0.5, size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 7.5),
+    axis.text.y = element_text(size = 7.5),
+    panel.grid = element_blank(),
+    legend.position = "right",
+    legend.key.height = unit(1.7, "cm"),
+    plot.margin = margin(8, 14, 8, 8)
+  )
 
 # ============================================================
 # VERSION TIDY DU TABLEAU

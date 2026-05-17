@@ -322,42 +322,42 @@ table_variables_creees <- data.frame(
   check.names = FALSE
 )
 
-variables_modelisation <- c(
-  "is_canceled",
-  "hotel",
-  "market_segment",
-  "customer_type",
-  "lead_time_cat",
-  "total_nights_cat",
-  "adr_cat",
-  "has_children",
-  "engagement_cat",
-  "previous_cancellations_cat",
-  "saison_tourisme",
-  "identity_location"
-)
-
-table_variables_modelisation <- table_variables_creees[
-  table_variables_creees$Variable %in% variables_modelisation,
-  c("Variable", "Role_dans_l_analyse")
-]
-
-table_variables_modelisation <- rbind(
-  data.frame(
-    Variable = c("hotel", "market_segment", "customer_type"),
-    Role_dans_l_analyse = c(
-      "Distinguer City Hotel et Resort Hotel",
-      "Caracteriser le canal commercial de reservation",
-      "Distinguer les profils de clients selon le type de reservation"
-    ),
-    check.names = FALSE
-  ),
-  table_variables_modelisation
-)
-
-table_variables_modelisation <- table_variables_modelisation[
-  order(match(table_variables_modelisation$Variable, variables_modelisation)),
-]
-
-rownames(table_variables_modelisation) <- NULL
-
+# variables_modelisation <- c(
+#   "is_canceled",
+#   "hotel",
+#   "market_segment",
+#   "customer_type",
+#   "lead_time_cat",
+#   "total_nights_cat",
+#   "adr_cat",
+#   "has_children",
+#   "engagement_cat",
+#   "previous_cancellations_cat",
+#   "saison_tourisme",
+#   "identity_location"
+# )
+# 
+# table_variables_modelisation <- table_variables_creees[
+#   table_variables_creees$Variable %in% variables_modelisation,
+#   c("Variable", "Role_dans_l_analyse")
+# ]
+# 
+# table_variables_modelisation <- rbind(
+#   data.frame(
+#     Variable = c("hotel", "market_segment", "customer_type"),
+#     Role_dans_l_analyse = c(
+#       "Distinguer City Hotel et Resort Hotel",
+#       "Caracteriser le canal commercial de reservation",
+#       "Distinguer les profils de clients selon le type de reservation"
+#     ),
+#     check.names = FALSE
+#   ),
+#   table_variables_modelisation
+# )
+# 
+# table_variables_modelisation <- table_variables_modelisation[
+#   order(match(table_variables_modelisation$Variable, variables_modelisation)),
+# ]
+# 
+# rownames(table_variables_modelisation) <- NULL
+# 

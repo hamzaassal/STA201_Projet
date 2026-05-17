@@ -16,7 +16,7 @@ Ce depot contient le travail de projet STA201 portant sur la prediction des annu
 |   |-- 01-import.R
 |   |-- 02-data_engenering.R
 |   |-- 03-stat_desc.R
-|   |-- 04-data preparation.R
+|   |-- 04-data_preparation.R
 |   |-- 05-Analyse Discriminante.R
 |   |-- 06-logistic.R
 |   |-- 07- Comparaison.R
@@ -45,7 +45,7 @@ Les scripts sont numerotes afin d'indiquer leur ordre logique d'execution.
 2. `01-import.R` importe la base de donnees et le dictionnaire des variables.
 3. `02-data_engenering.R` realise le nettoyage, construit les variables d'analyse et prepare les tableaux recapitulatif du rapport.
 4. `03-stat_desc.R` produit les analyses descriptives et les graphiques exploratoires.
-5. `04-data preparation.R` construit la base de modelisation et effectue la subdivision stratifiee en apprentissage, validation et test.
+5. `04-data_preparation.R` construit la base de modelisation et effectue la subdivision stratifiee en apprentissage, validation et test.
 6. `05-Analyse Discriminante.R` construit l'approche ACM + LDA/QDA et compare les modeles sur validation.
 7. `06-logistic.R` construit les modeles de regression logistique, selectionne les variables et choisit les seuils sur validation.
 8. `07- Comparaison.R` centralise les tests, les evaluations finales sur l'echantillon test et la comparaison entre methodes.

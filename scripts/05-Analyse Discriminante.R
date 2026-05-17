@@ -1,4 +1,4 @@
-source("scripts/04-data preparation.R")
+source("scripts/04-data_preparation.R")
 
 # ============================================================
 # ANALYSE DISCRIMINANTE SUR AXES D'ACM
@@ -602,7 +602,11 @@ acm_modalities_coordinates_labeled <- as.data.frame(res_mca_train$var$coord) |>
     modality_label = coalesce(modality_label, modality)
   )
 
-plot_mca_modalities_labeled <- function(dims = c(1, 2), top_n = 30) {
+plot_mca_modalities_labeled <- function(
+    dims = c(1, 2),
+    top_n = 30,
+    label_size = 2.6,
+    point_range = c(1.8, 4.8)) {
   dim_names <- paste0("Dim ", dims)
 
   contribution_plane <- as.data.frame(res_mca_train$var$contrib) |>
@@ -632,11 +636,16 @@ plot_mca_modalities_labeled <- function(dims = c(1, 2), top_n = 30) {
     geom_hline(yintercept = 0, color = "grey75", linewidth = 0.4) +
     geom_vline(xintercept = 0, color = "grey75", linewidth = 0.4) +
     geom_point(aes(size = contribution_plane), color = "#C9002B", alpha = 0.75) +
-    geom_text(
+    ggrepel::geom_text_repel(
       aes(label = modality_label),
-      size = 3,
-      check_overlap = TRUE,
-      vjust = -0.7
+      size = label_size,
+      max.overlaps = Inf,
+      box.padding = 0.35,
+      point.padding = 0.25,
+      min.segment.length = 0.05,
+      segment.color = "grey70",
+      segment.size = 0.25,
+      seed = 123
     ) +
     geom_point(
       data = target_plane,
@@ -656,7 +665,10 @@ plot_mca_modalities_labeled <- function(dims = c(1, 2), top_n = 30) {
       size = 3.5,
       vjust = 1.4
     ) +
-    scale_size_continuous(range = c(2, 6)) +
+    scale_size_continuous(range = point_range) +
+    scale_x_continuous(expand = expansion(mult = 0.16)) +
+    scale_y_continuous(expand = expansion(mult = 0.14)) +
+    coord_cartesian(clip = "off") +
     labs(
       title = paste0("Plan factoriel ", dims[1], "-", dims[2]),
       subtitle = "Modalites actives labellisees par variable d'origine et cible projetee",
@@ -667,7 +679,8 @@ plot_mca_modalities_labeled <- function(dims = c(1, 2), top_n = 30) {
     theme_minimal(base_size = 12) +
     theme(
       legend.position = "bottom",
-      panel.grid.minor = element_blank()
+      panel.grid.minor = element_blank(),
+      plot.margin = margin(8, 14, 8, 14)
     )
 }
 
