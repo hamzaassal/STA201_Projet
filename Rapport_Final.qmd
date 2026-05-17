@@ -276,13 +276,13 @@ source(("scripts/03-stat_desc.R"))
 final_bivariate_plot
 ```
 
-Nous faisons un focus sur deux variables créées : le délai de réservation et l'engagement client. D'après l'analyse bivariée présentée dans la figure @fig-stat, on constate que plus le délai de réservation est long, plus la probabilité d'annulation augmente. De même, un fort engagement du client se traduit par une faible probabilité d'annulation.
+Nous faisons un focus sur deux variables créées : le délai de réservation et l'engagement client. D'après l'analyse bivariée présentée dans la  @fig-stat, on constate que plus le délai de réservation est long, plus la probabilité d'annulation augmente. De même, un fort engagement du client se traduit par une faible probabilité d'annulation.
 
 Vous trouverez un panorama des statistiques bivariées avec notre variable d’intérêt en annexe @fig-stat_generales
 
-Une étude des associations entre variables a également été réalisée à partir du V de Cramer. Nous en déduisons une association faible entre la majorité des variables (V de Cramer \< 0,2). Toutefois, quelques variables présentent une association forte, par exemple entre *market_segment* et *distribution_channel* (V de Cramér = 0,604). Ce constat nous a conduits à arbitrer entre ces deux variables. L'ensemble de la matrice des associations est détaillé dans la figure @fig-stat_corr en annexe.
+Une étude des associations entre variables a également été réalisée à partir du V de Cramer. Nous en déduisons une association faible entre la majorité des variables (V de Cramer \< 0,2). Toutefois, quelques variables présentent une association forte, par exemple entre *market_segment* et *distribution_channel* (V de Cramér = 0,604). Ce constat nous a conduits à arbitrer entre ces deux variables. L'ensemble de la matrice des associations est détaillé dans la @fig-stat_corr en annexe.
 
-\newpage
+<!-- \newpage -->
 
 ## Objectif de l'étude et démarche choisie
 
@@ -316,7 +316,7 @@ Pour chaque méthode, les modèles ont d’abord été construits à partir de l
 
 Une fois le modèle optimal sélectionné, celui-ci a été réestimé sur l’ensemble des données d’entraînement et de validation (soit 75 % des données). Enfin, l’évaluation finale des performances a été réalisée exclusivement sur la base test, laquelle n’a été utilisée ni pour la construction ni pour la sélection des modèles.
 
-La figure @fig-schema en annexe présente la démarche suivie pour la modélisation.
+La @fig-schema en annexe présente la démarche suivie pour la modélisation.
 
 \newpage
 
@@ -523,7 +523,7 @@ Les modèles pénalisés, tels que le ridge, le lasso et l’elastic net, n’ap
 
 ### Interpretation et Importance des variables
 
-La figure @fig-importance-variables-logistique présente l'importance de toutes les variables du modèle retenu `r modele_retenu`. Les barres correspondent à l'importance totale, calculée comme la somme des valeurs absolues des coefficients exprimés en log-odds. La courbe indique l'importance moyenne par modalité, afin de nuancer l'effet du nombre de modalités. Les variables les plus marquantes sont `r variables_importance_top`.
+La @fig-importance-variables-logistique présente l'importance de toutes les variables du modèle retenu `r modele_retenu`. Les barres correspondent à l'importance totale, calculée comme la somme des valeurs absolues des coefficients exprimés en log-odds. La courbe indique l'importance moyenne par modalité, afin de nuancer l'effet du nombre de modalités. Les variables les plus marquantes sont `r variables_importance_top`.
 
 ```{r}
 #| label: fig-importance-variables-logistique
@@ -563,15 +563,15 @@ Toutes choses égales par ailleurs, une réservation avec un délai `tres_long` 
 
 Pour `previous_cancellations_cat`, les réservations associées à la modalité `Une_ou_plus` ont des chances d’annulation environ 16,11 fois plus élevées par rapport à ceux qui n'ont pas d'antécedent d'annulation connu (`non`). L’historique d’annulation apparaît donc comme un signal fort du risque futur.
 
-Pour `engagement_cat`, par rapport aux individus à engagement `faibles` engagements, ceux ayant un `fort` engagement voient leur chances d’annulation réduites d’environ 91 %. Un engagement élevé du client est donc associé à une plus grande stabilité de la réservation.
+Pour `engagement_cat`, par rapport aux individus à `faible` engagement, ceux ayant un `fort` engagement voient leur chances d’annulation réduites d’environ 91 %. Un engagement élevé du client est donc associé à une plus grande stabilité de la réservation. Pour rappel engagement_cat est issu du data-engineering @tbl-variables-creees en annexe.
 
-Pour `market_segment`, les réservations en lignes provenant des agences de voyages (`Online_TA`) ont des chances d’annulation environ 4,50 fois plus élevées que le `Direct`, soit une hausse d’environ 350 %. Ce résultat suggère que les réservations effectuées via les agences en ligne sont plus exposées au risque d’annulation.
+Pour `market_segment`, les réservations en ligne provenant des agences de voyages (`Online_TA`) ont des chances d’annulation environ 4,50 fois plus élevées que le `Direct`, soit une hausse d’environ 350 %. Ce résultat suggère que les réservations effectuées via les agences en ligne sont plus exposées au risque d’annulation.
 
 Enfin, pour `identity_location`, par rapport au reste de l'europe `Europe_hors_PRT`, les locaux `Local_Portugal` présente un odds ratio de 9,05, soit des chances d’annulation environ 805 % plus élevées.
 
 ## Choix du seuil et discrimination
 
-La figure @fig-annexe-seuil-logistique complète cette lecture en présentant, côte à côte, l'évolution des métriques selon le seuil de classification et la courbe ROC du modèle complet. La courbe ROC synthétise la capacité de discrimination du modèle indépendamment du seuil choisi.
+La @fig-annexe-seuil-logistique complète cette lecture en présentant, côte à côte, l'évolution des métriques selon le seuil de classification et la courbe ROC du modèle complet. La courbe ROC synthétise la capacité de discrimination du modèle indépendamment du seuil choisi.
 
 Le modèle complet est donc retenu comme référence principale, car il combine performance prédictive et interprétabilité. Il permet une lecture directe des coefficients et des odds ratios. Après sélection du modèle, le seuil de classification est fixé à `r scales::number(validation_selected$threshold, accuracy = 0.01)`. Sur l’échantillon de validation, l’AUC atteint `r scales::percent(validation_selected$auc, accuracy = 0.1)`, le recall `r scales::percent(validation_selected$sensitivity_recall, accuracy = 0.1)` et le F1-score `r scales::percent(validation_selected$f1_score, accuracy = 0.1)`, ce qui traduit une bonne capacité à détecter les annulations tout en conservant une précision satisfaisante.
 
@@ -648,7 +648,7 @@ plot_roc_logit <- logit_validation_roc_curve |>
 plot_seuil_logit + plot_roc_logit + patchwork::plot_layout(widths = c(1.25, 1))
 ```
 
-Pour l'évaluation de la calibration du modèle, nous avons privilegié le score de Brier au test de Hosmer-Lemeshow, compte tenu de la sensibilité extrême de ce dernier en présence d’un échantillon de grande taille. Le score de Brier nous donne ainsi mesure plus stable et plus lisible dans notre contexte.
+Pour l'évaluation de la calibration du modèle, nous avons privilegié le score de Brier au test de Hosmer-Lemeshow, compte tenu de la sensibilité extrême de ce dernier en présence d’un échantillon de grande taille. Le score de Brier nous donne ainsi une mesure plus stable et plus lisible dans notre contexte.
 
 Le score de Brier du modèle retenu est de `r scales::number(selection_selected$brier_score, accuracy = 0.0001)`. Il mesure directement l'écart moyen entre les probabilités prédites et les annulations observées : plus il est faible, meilleure est la qualité probabiliste du modèle.
 
@@ -740,7 +740,7 @@ acm_axis_interpretation$eigenvalues |>
   )
 ```
 
-On note que nous avons 26 axes au total. En annexe, la représentation de l'inertie de l'ensemble des axes est disponible dans la figure @fig-acm-scree-all.
+On note que nous avons 26 axes au total. En annexe, la représentation de l'inertie de l'ensemble des axes est disponible dans la @fig-acm-scree-all.
 
 \FloatBarrier
 
@@ -872,7 +872,7 @@ knitr::kable(
 
 \FloatBarrier
 
-Une première lecture des résultats de validation conduirait à retenir directement le modèle présentant la meilleure AUC dans le Tableau en annexe @tbl-auc-validation-axes. Dans notre cas, il s'agit du modèle KNN avec `k = 15` et 26 axes ACM. Toutefois, notre objectif n'est pas uniquement de maximiser la performance apparente sur validation : nous cherchons aussi à conserver un modèle parcimonieux, plus stable et moins exposé au risque de sur-ajustement. Nous examinons donc plus finement les gains marginaux d'AUC associés à l'ajout progressif d'axes factoriels. Cette analyse montre que le passage de 15 à 26 axes améliore très peu l'AUC, alors qu'il augmente sensiblement la complexité du modèle. Nous retenons donc le modèle KNN avec `k = 15` et 15 axes ACM comme compromis entre précision prédictive, stabilité et parcimonie.
+Une première lecture des résultats de validation conduirait à retenir directement le modèle présentant la meilleure AUC dans la @tbl-auc-validation-axes en annexe. Dans notre cas, il s'agit du modèle KNN avec `k = 15` et 26 axes ACM. Toutefois, notre objectif n'est pas uniquement de maximiser la performance apparente sur validation : nous cherchons aussi à conserver un modèle parcimonieux, plus stable et moins exposé au risque de sur-ajustement. Nous examinons donc plus finement les gains marginaux d'AUC associés à l'ajout progressif d'axes factoriels. Cette analyse montre que le passage de 15 à 26 axes améliore très peu l'AUC, alors qu'il augmente sensiblement la complexité du modèle. Nous retenons donc le modèle KNN avec `k = 15` et 15 axes ACM comme compromis entre précision prédictive, stabilité et parcimonie.
 
 ```{r}
 #| label: tbl-gains-marginaux-auc-knn
