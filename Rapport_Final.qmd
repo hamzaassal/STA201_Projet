@@ -21,11 +21,12 @@ format:
         \definecolor{cnamred}{HTML}{C9002B}
         \usepackage{float}
         \usepackage{placeins}
+        \floatplacement{table}{H}
         \usepackage{fancyhdr}
         \pagestyle{fancy}
         \fancyhf{}
         \lhead{Projet STA201}
-        \rhead{Annulations hotelières}
+        \rhead{Annulations hôtelières}
         \cfoot{\thepage}
         \setlength{\headheight}{15pt}
         \renewcommand{\arraystretch}{1.08}
@@ -40,11 +41,15 @@ format:
           \vfill
           {\Huge\bfseries{} Projet STA201 : Analyse multivariée approfondie \par}
           \vspace{0.45cm}
-          {\LARGE{} Etude de cas : Annulations de reservations hotelières \par}
+          {\LARGE{} Étude de cas : annulations de réservations hôtelières \par}
           \vfill
           \begin{tabular}{rl}
           Auteurs : & ASSAL HAMZA \\
                     & TRAORE SAH\\
+          Emails : & assal.hamza@yahoo.fr \\
+                   & yacoubat16@yahoo.fr \\
+          Téléphones : & +33 7 54 46 67 64 \\
+                       & +33 7 58 57 86 34 \\
           Date : & 17-05-2026 \\
           \end{tabular}
           \vspace*{1.4cm}
@@ -94,7 +99,7 @@ source("scripts/04-data_preparation.R")
 
 # Présentation des bases théoriques des deux approches
 
-## Premiére approche: Régression logistique
+## Première approche : régression logistique
 
 La régression logistique est une méthode de classification supervisée utilisée lorsque la variable à expliquer est qualitative, le plus souvent binaire. Elle permet d'estimer la probabilité qu'un individu appartienne à une modalité d'intérêt à partir d'un ensemble de variables explicatives quantitatives ou qualitatives. Lorsque les variables explicatives sont qualitatives, elles sont généralement transformées en variables indicatrices afin d'être intégrées au modèle.
 
@@ -145,31 +150,15 @@ où $L(\beta)$ représente la vraisemblance du modèle et $\text{Pénalité}(\be
 
 #### Ridge
 
-La régression ridge applique une pénalisation de norme $L_2$ sur les coefficients :
-
-$$
-\min_{\beta}\left[-\log L(\beta) + \lambda \sum_{j=1}^{p} \beta_j^2\right]
-$$
-
-Le paramètre $\lambda$ contrôle l’intensité de la pénalisation. Plus $\lambda$ est élevé, plus les coefficients sont contraints vers zéro. La méthode ridge réduit la magnitude des coefficients sans les annuler complètement. Elle est particulièrement utile en présence de multicolinéarité, car elle stabilise les estimations lorsque plusieurs variables explicatives portent une information similaire.
+La régression ridge applique une pénalisation de norme $L_2$ sur les coefficients: $$\min_{\beta}\left[-\log L(\beta) + \lambda \sum_{j=1}^{p} \beta_j^2\right]$$ Le paramètre $\lambda$ contrôle l’intensité de la pénalisation. Plus $\lambda$ est élevé, plus les coefficients sont contraints vers zéro. La méthode ridge réduit la magnitude des coefficients sans les annuler complètement. Elle est particulièrement utile en présence de multicolinéarité, car elle stabilise les estimations lorsque plusieurs variables explicatives portent une information similaire.
 
 #### Lasso
 
-La méthode lasso repose sur une pénalisation de norme $L_1$ : $\min_{\beta}\left[-\log L(\beta) + \lambda \sum_{j=1}^{p} |\beta_j|\right]$
-
-Contrairement au ridge, le lasso peut ramener certains coefficients exactement à zéro. Il réalise donc simultanément une régularisation du modèle et une sélection automatique de variables. Cette propriété est particulièrement intéressante lorsque le nombre de variables explicatives est élevé ou lorsque certaines variables apportent peu d’information au modèle.
+La méthode lasso repose sur une pénalisation de norme $L_1$ : $$\min_{\beta}\left[-\log L(\beta) + \lambda \sum_{j=1}^{p} |\beta_j|\right]$$ Contrairement au ridge, le lasso peut ramener certains coefficients exactement à zéro. Il réalise donc simultanément une régularisation du modèle et une sélection automatique de variables. Cette propriété est particulièrement intéressante lorsque le nombre de variables explicatives est élevé ou lorsque certaines variables apportent peu d’information au modèle.
 
 #### Elastic net
 
-L’elastic net combine les deux types de pénalisation, ridge et lasso :
-
-$$
-\min_{\beta}\left[-\log L(\beta) + \lambda \left((1 - \alpha)\sum_{j=1}^{p}\beta_j^2 + \alpha\sum_{j=1}^{p}|\beta_j|\right)\right]
-$$
-
-Le paramètre $\alpha$ contrôle l’équilibre entre les deux pénalisations :
-
-$\alpha = 0$ correspond à une pénalisation ridge ;$\alpha = 1$ correspond à une pénalisation lasso ;$0 < \alpha < 1$ correspond à un compromis elastic net.
+L’elastic net combine les deux types de pénalisation, ridge et lasso : $$\min_{\beta}\left[-\log L(\beta) + \lambda \left((1 - \alpha)\sum_{j=1}^{p}\beta_j^2 + \alpha\sum_{j=1}^{p}|\beta_j|\right)\right]$$ Le paramètre $\alpha$ contrôle l’équilibre entre les deux pénalisations : $\alpha = 0$ correspond à une pénalisation ridge ;$\alpha = 1$ correspond à une pénalisation lasso ;$0 < \alpha < 1$ correspond à un compromis elastic net.
 
 Cette approche est adaptée lorsque plusieurs variables sont corrélées entre elles. Elle combine la stabilité du ridge et la capacité de sélection du lasso.
 
@@ -177,27 +166,21 @@ Cette approche est adaptée lorsque plusieurs variables sont corrélées entre e
 
 L'évaluation du modèle repose sur plusieurs indicateurs issus de la matrice de confusion. L'accuracy mesure la proportion globale de bonnes classifications, mais elle peut être insuffisante lorsque les classes sont déséquilibrées ou lorsque l'on s'intéresse davantage à une classe particulière. La sensibilité, ou recall, mesure la proportion d'individus de la classe d'intérêt correctement détectés. La spécificité mesure la proportion d'individus de l'autre classe correctement reconnus. La précision indique, parmi les individus prédits dans la classe d'intérêt, la proportion qui appartient réellement à cette classe. Le F1-score combine précision et sensibilité, tandis que l'AUC mesure la capacité globale du modèle à séparer les classes indépendamment d'un seuil particulier.
 
-Pour l'évaluation de la calibration du modèle, le score de Brier est privilegié au test de Hosmer-Lemeshow, compte tenu de la sensibilité extrême de ce dernier en présence d’un échantillon de grande taille. Le score de Brier donne ainsi mesure plus stable et plus lisible dans ce contexte.il est defini par: $\text{Brier} = \frac{1}{n} \sum_{i=1}^{n} (\hat{p}_i - y_i)^2$ où $\hat{p}_i$ désigne la probabilité prédite d’annulation pour l’observation $i$, et $y_i$ vaut 1 si la réservation est annulée et 0 sinon. Plus ce score est faible, meilleure est la qualité probabiliste du modèle.
+Pour l'évaluation de la calibration du modèle, le score de Brier est privilégié au test de Hosmer-Lemeshow, compte tenu de la sensibilité extrême de ce dernier en présence d’un échantillon de grande taille. Le score de Brier donne ainsi une mesure plus stable et plus lisible dans ce contexte. Il est défini par : $\text{Brier} = \frac{1}{n} \sum_{i=1}^{n} (\hat{p}_i - y_i)^2$ où $\hat{p}_i$ désigne la probabilité prédite d’annulation pour l’observation $i$, et $y_i$ vaut 1 si la réservation est annulée et 0 sinon. Plus ce score est faible, meilleure est la qualité probabiliste du modèle.
 
-La régression logistique présente plusieurs avantages : elle est relativement simple à mettre en œuvre, interprétable, adaptée à une variable cible binaire et compatible avec des variables explicatives de nature variée. Ses limites tiennent notamment à l'hypothèse d'une relation linéaire entre les variables explicatives et le logit de la probabilité, à la sensibilité aux valeurs extrêmes, à la multicolinéarité et aux situations de séparation quasi parfaite.
+<!-- La régression logistique présente plusieurs avantages : elle est relativement simple à mettre en œuvre, interprétable, adaptée à une variable cible binaire et compatible avec des variables explicatives de nature variée. Ses limites tiennent notamment à l'hypothèse d'une relation linéaire entre les variables explicatives et le logit de la probabilité, à la sensibilité aux valeurs extrêmes, à la multicolinéarité et aux situations de séparation quasi parfaite. -->
 
-## Deuxiéme approche: Analyse discriminante sur variables qualitatives
+## Deuxième approche : analyse discriminante sur variables qualitatives
 
 La méthode DISQUAL, développée dans la tradition de l’analyse des données de Saporta, est une méthode de discrimination adaptée aux variables qualitatives. Elle repose sur deux étapes principales : d’abord une Analyse des Correspondances Multiples (ACM), puis une méthode de classification supervisée appliquée aux coordonnées factorielles obtenues.
 
-Soit un échantillon de $n$ individus décrits par $p$ variables qualitatives. Les données sont d’abord transformées en tableau disjonctif complet $Z$, dans lequel chaque modalité est codée par une indicatrice binaire. L’ACM permet ensuite de projeter les individus dans un espace factoriel continu. Chaque individu $i$ est alors représenté par un vecteur de coordonnées :
-
-$$F_i = (f_{i1}, f_{i2}, \ldots, f_{iK}),$$
-
-où $f_{ik}$ désigne la coordonnée de l’individu $i$ sur l’axe factoriel $k$. Ces coordonnées deviennent les variables explicatives utilisées par les modèles de classification. En pratique, seuls les axes les plus informatifs sont conservés afin de limiter le bruit et le risque de sur-ajustement.
+Soit un échantillon de $n$ individus décrits par $p$ variables qualitatives. Les données sont d’abord transformées en tableau disjonctif complet $Z$, dans lequel chaque modalité est codée par une indicatrice binaire. L’ACM permet ensuite de projeter les individus dans un espace factoriel continu. Chaque individu $i$ est alors représenté par un vecteur de coordonnées $F_i = (f_{i1}, f_{i2}, \ldots, f_{iK}),$ où $f_{ik}$ désigne la coordonnée de l’individu $i$ sur l’axe factoriel $k$. Ces coordonnées deviennent les variables explicatives utilisées par les modèles de classification. En pratique, seuls les axes les plus informatifs sont conservés afin de limiter le bruit et le risque de sur-ajustement.
 
 Dans une démarche prédictive rigoureuse, l’ACM doit être estimée uniquement sur la base d’entraînement. Les bases de validation et de test sont ensuite projetées comme individus supplémentaires. Cette précaution évite une fuite d’information, car les axes utilisés pour entraîner le modèle ne doivent pas être construits à partir d’observations servant ensuite à évaluer sa performance.
 
 ### Analyse discriminante linéaire
 
-La LDA, ou analyse discriminante linéaire, trouve son origine dans les travaux de Fisher. Il s’agit d’un classifieur probabiliste fondé sur le théorème de Bayes. On suppose que, conditionnellement à la classe $Y=k$, le vecteur explicatif $X$ suit une loi normale multivariée :
-
-$$X \mid Y=k \sim \mathcal{N}(\mu_k, \Sigma).$$
+La LDA, ou analyse discriminante linéaire, trouve son origine dans les travaux de Fisher. Il s’agit d’un classifieur probabiliste fondé sur le théorème de Bayes. On suppose que, conditionnellement à la classe $Y=k$, le vecteur explicatif $X$ suit une loi normale multivariée: $X \mid Y=k \sim \mathcal{N}(\mu_k, \Sigma).$
 
 L’hypothèse centrale de la LDA est que les classes partagent une même matrice de covariance $\Sigma$, mais possèdent des moyennes différentes $\mu_k$. Pour un individu décrit par un vecteur $x$, la règle de décision consiste à choisir la classe maximisant la probabilité a posteriori $P(Y=k \mid X=x)$. En appliquant la formule de Bayes, cette probabilité est proportionnelle au produit de la densité conditionnelle et de la probabilité a priori :
 
@@ -211,9 +194,7 @@ L’individu est affecté à la classe dont le score $\delta_k(x)$ est le plus �
 
 ### Analyse discriminante quadratique
 
-La QDA, ou analyse discriminante quadratique, repose sur la même logique bayésienne que la LDA, mais relâche l’hypothèse d’égalité des matrices de covariance. On suppose alors :
-
-$$X \mid Y=k \sim \mathcal{N}(\mu_k, \Sigma_k).$$
+La QDA, ou analyse discriminante quadratique, repose sur la même logique bayésienne que la LDA, mais relâche l’hypothèse d’égalité des matrices de covariance. On suppose alors: $X \mid Y=k \sim \mathcal{N}(\mu_k, \Sigma_k).$
 
 Chaque classe possède donc sa propre matrice de covariance $\Sigma_k$. La fonction discriminante devient :
 
@@ -225,9 +206,7 @@ La frontière de décision entre deux classes n’est plus linéaire mais quadra
 
 Le KNN, ou méthode des $k$ plus proches voisins, adopte une logique différente de la LDA et de la QDA. Il ne suppose pas de distribution normale, ni de forme paramétrique de la frontière de décision. C’est une méthode non paramétrique fondée sur la proximité entre individus.
 
-Pour prédire la classe d’un nouvel individu $x$, on calcule sa distance aux individus de la base d’entraînement dans l’espace des axes ACM. On retient ensuite les $k$ individus les plus proches. La probabilité prédite d’annulation peut être estimée par la proportion de voisins appartenant à la classe d’annulation :
-
-$$\widehat{P}(Y=1 \mid X=x) = \frac{1}{k}\sum_{i \in N_k(x)} \mathbf{1}(Y_i=1),$$
+Pour prédire la classe d’un nouvel individu $x$, on calcule sa distance aux individus de la base d’entraînement dans l’espace des axes ACM. On retient ensuite les $k$ individus les plus proches. La probabilité prédite d’annulation peut être estimée par la proportion de voisins appartenant à la classe d’annulation : $\widehat{P}(Y=1 \mid X=x) = \frac{1}{k}\sum_{i \in N_k(x)} \mathbf{1}(Y_i=1),$
 
 où $N_k(x)$ désigne l’ensemble des $k$ plus proches voisins de $x$. L’individu est ensuite classé comme annulé si cette probabilité dépasse un seuil donné, par exemple $0{,}50$, ou un seuil optimisé sur validation.
 
@@ -239,11 +218,11 @@ La LDA et la QDA reposent sur une hypothèse de normalité multivariée des coor
 
 Ainsi, la LDA et la QDA peuvent être utilisées à la fois comme modèles probabilistes et comme classifieurs empiriques. Le choix final entre LDA, QDA et KNN doit donc reposer principalement sur la performance observée sur validation et sur test. Les paramètres importants, notamment le nombre d’axes ACM, le nombre de voisins $k$ et le seuil de classification, doivent être sélectionnés sans utiliser la base de test afin de garantir une évaluation non biaisée. \newpage
 
-# Introduction, problématique et base de données
+# Présentation de la base, préparation des données et démarche d’analyse
 
 ## Présentation de la base
 
-Notre étude s’appuie sur la base de données *Hotel Booking Demand Datasets*, construite afin d’analyser le comportement d’annulation des réservations dans le secteur hôtelier. Cette base a notamment été diffusée sur Kaggle et documentée dans un article scientifique publié dans la revue *Data in Brief*. Les informations détaillées sur l'origine des données sont précisées dans la section @sec-sources.
+Notre étude s’appuie sur la base de données [Hotel Booking Demand Datasets](https://www.sciencedirect.com/science/article/pii/S2352340918315191), construite afin d’analyser le comportement d’annulation des réservations dans le secteur hôtelier. Cette base a notamment été diffusée sur Kaggle et documentée dans un article scientifique publié dans la revue *Data in Brief*. Les informations détaillées sur l'origine des données sont précisées dans la section @sec-sources.
 
 La base contient 119 390 réservations provenant de deux types d'hotels *Resort Hotel* et *City Hotel*. Chaque observation correspond à une réservation hôtelière, qu’elle ait donné lieu à un séjour effectif ou à une annulation.
 
@@ -251,77 +230,78 @@ La variable d’intérêt de notre étude est donc la variable indicatrice d’a
 
 La base de données ne contient pas de valeurs manquantes. Toutefois, certaines variables catégorielles, peuvent prendre la valeur « NULL ». Cette valeur ne correspond pas à une donnée absente, mais indique simplement que l’information n’est pas applicable. Par exemple, une valeur « NULL » pour la variable children signifie que la réservation ne comporte pas d'enfant.
 
-## Présentation des variables importantes à l'étude
+## Préparation et analyse des données
+
+### Présentation des variables importantes à l'étude
 
 Les principales variables utilisées dans l'étude sont décrites en Annexe, dans le Tableau @tbl-dico. Elles couvrent la nature de l'hôtel, la variable cible `is_canceled`, les caractéristiques temporelles de la réservation, la composition du séjour, le canal de réservation, le prix moyen journalier et les demandes particulières du client.
 
-\newpage
+<!-- \newpage -->
 
-# Description des données, prétraitements et statistiques descriptives
+### Prétraitements et statistiques descriptives
 
 La structure générale de la base est résumée en Annexe dans le Tableau @tbl-base-recap.
 
-## Nettoyage et cohérence des données et data engenering
+### Nettoyage, cohérence des données et ingénierie des variables
 
 Avant l'analyse statistique et la modélisation, plusieurs contrôles ont été réalisés afin de sécuriser l'utilisation de la base. L'objectif étant de conserver l'information disponible tout en traitant les situations susceptibles de produire des incohérences dans les variables construites ou dans les modèles.
 
 La synthèse chiffrée de ces contrôles et décisions est présentée en Annexe dans le Tableau @tbl-cleaning-recap.
 
-À l'issue de ces traitements, la base d'analyse contient `r nrow(df_cleaned)` observations. Ensuite, de grands travaux de data engenering ont été opéré sur la base de compréhension métier de la problématique et des analyses statistiques.
+À l'issue de ces traitements, la base d'analyse contient `r nrow(df_cleaned)` observations. Ensuite, plusieurs travaux d'ingénierie des variables ont été opérés sur la base de compréhension métier de la problématique et des analyses statistiques.
 
-Certaines variables initiales ont été transformé en indicateurs plus directement exploitables pour l'analyse. Plusieurs variables synthétiques ont été construites afin de rendre les résultats plus lisibles, de limiter le nombre de modalités et de disposer de profils interprétables.
+Certaines variables initiales ont été transformées en indicateurs plus directement exploitables pour l'analyse. Plusieurs variables synthétiques ont été construites afin de rendre les résultats plus lisibles, de limiter le nombre de modalités et de disposer de profils interprétables.
 
 Ces variables portent notamment sur le délai de réservation, la durée du séjour, le niveau de prix, la présence d'enfants, l'engagement du client, l'historique d'annulation, la saison touristique et l'origine géographique du client. La variable cible `is_canceled` a également été recodée sous forme factorielle avec les modalités `Non` et `Oui`, ce qui permet une lecture homogène des sorties descriptives et prédictives.
 
-Ainsi, nous avons l'exemple de *lead_time* devient: *lead_time_cat* = ("derniere_minute","court", "moyen","long", "tres_long"), qui mesure d'une façon plus différenciée la durée entre la reservation et la date d'arrivée.
+Ainsi, la variable *lead_time* devient *lead_time_cat* = ("derniere_minute", "court", "moyen", "long", "tres_long"), qui mesure d'une façon plus différenciée la durée entre la réservation et la date d'arrivée.
 
-Aussi les variables *total_of_special_requests*, *booking_changes*, *parking* deviennent *engagement_cat* qui mesure l'invetissement envers la reservation.
+De même, les variables *total_of_special_requests*, *booking_changes* et *parking* deviennent *engagement_cat* qui mesure l'investissement du client dans la réservation.
 
-L'exhausivité des variables construites et leurs détails sont dans le Tableau @tbl-variables-creees.
+L'exhaustivité des variables construites et leurs détails sont présentés dans le Tableau @tbl-variables-creees.
 
-## Analyse statistique élémentaire
+### Analyse statistique élémentaire
 
-Notre variable d'intérêt "is_canceled" présente *37%* des reservations annulées, ce qui reste un niveau élévé d'ou l'importance de ce type d'étude et qui nous donne une base relativement équilibrée entre les deux modalités.
+Notre variable d'intérêt `is_canceled` présente **37 %** des réservations annulées, ce qui reste un niveau élevé. Cela justifie l'importance de ce type d'étude et fournit une base relativement équilibrée entre les deux modalités.
 
 ```{r}
 #| label: fig-stat
-#| fig-cap: "stat desc" 
-#| fig-width: 7.2
-#| fig-height: 4.2
-#| out-width: "92%"
-#| cache: true
-#| cache.extra: script_signature(c("scripts/02-data_engenering.R", "scripts/03-stat_desc.R"))
+#| fig-cap: "Répartition de l'annulation et poids des modalités pour deux variables clés"
+#| fig-width: 9.4
+#| fig-height: 4.7
+#| out-width: "98%"
+#| cache: false
 source("scripts/02-data_engenering.R")
 source(("scripts/03-stat_desc.R"))
 final_bivariate_plot
 ```
 
-Nous faisons un focus sur deux des variables crées à savoir le délai de réservation et l'engagement client. d'aprés l'analyse bivariée en figure @fig-stat on constat que plus le délai de reservation est long plus la probabilité d'annulation augmente. Aussi un fort engagement du client traduit par une faible probabilité d'annulation.
+Nous faisons un focus sur deux variables créées : le délai de réservation et l'engagement client. D'après l'analyse bivariée présentée dans la figure @fig-stat, on constate que plus le délai de réservation est long, plus la probabilité d'annulation augmente. De même, un fort engagement du client se traduit par une faible probabilité d'annulation.
 
-Vous trouverez un panorama des statistiques bivariées avec notre variable d’intérêt en annexe @final_bivariate_plot_all
+Vous trouverez un panorama des statistiques bivariées avec notre variable d’intérêt en annexe @fig-stat_generales
 
-Aussi une étude de corrélation entre les variables a été faite sur la base du V de cramer. Nous en déduisons une corrélation faible entre la majorité des variables (V-cramer\<0.2). Toutefois quelques variables présentent une forte corrélation (exemple entre *market_segment* et *distribution_channel* =\> cramer_v=0.604). Ce constat nous a mené à arbitrer entre ces deux variables. L'ensemble de la matrice des assosiciations est détaillé sur la figure @fig-stat_corr en annexe.
+Une étude des associations entre variables a également été réalisée à partir du V de Cramer. Nous en déduisons une association faible entre la majorité des variables (V de Cramer \< 0,2). Toutefois, quelques variables présentent une association forte, par exemple entre *market_segment* et *distribution_channel* (V de Cramér = 0,604). Ce constat nous a conduits à arbitrer entre ces deux variables. L'ensemble de la matrice des associations est détaillé dans la figure @fig-stat_corr en annexe.
 
 \newpage
 
-# Objectif de l'étude et démarche choisie
+## Objectif de l'étude et démarche choisie
 
-L'objectif opérationnel du projet est de mieux identifier les réservations susceptibles d'être annulées. La démarche retenue consiste, aprés avoir construit des variables qualitatives interprétables, à mobiliser deux méthodes : la régression logistique, pour estimer une probabilité d'annulation et interpréter l'effet des facteurs explicatifs, et l'analyse discriminante sur variables qualitatives, pour étudier la discrimination entre les profils de réservations annulées et non annulées.
+L'objectif opérationnel du projet est de mieux identifier les réservations susceptibles d'être annulées. La démarche retenue consiste, après avoir construit des variables qualitatives interprétables, à mobiliser deux méthodes : la régression logistique, pour estimer une probabilité d'annulation et interpréter l'effet des facteurs explicatifs, et l'analyse discriminante sur variables qualitatives, pour étudier la discrimination entre les profils de réservations annulées et non annulées.
 
-Pour les deux méthodes nous avons retenues `r nrow(table_variables_modelisation)` variables qualitatives qui nous semblent les plus pertinentes pour l'étude présentées dans le Tableau @tbl-variables-modelisation.
+Pour les deux méthodes, nous avons retenu `r nrow(table_variables_modelisation)` variables qualitatives qui nous semblent les plus pertinentes pour l'étude. Elles sont présentées dans le Tableau ci dessous :
 
 ```{r}
 #| label: tbl-variables-modelisation
-#| tbl-cap: "Variables retenues pour les modélisations "
+#| tbl-cap: "Variables retenues pour les modélisations"
 knitr::kable(
   table_variables_modelisation,
   format = "latex",
   booktabs = TRUE,
   row.names = FALSE,
-  col.names = c("Variable","Modalite", "Rôle dans l'analyse")
+  col.names = c("Variable", "Modalité", "Rôle dans l'analyse")
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 8
   ) |>
@@ -340,16 +320,353 @@ La figure @fig-schema en annexe présente la démarche suivie pour la modélisat
 
 \newpage
 
-# Résultats et interprétations de la première méthode : régression logistique
+# Résultats et interprétations de la première approche : régression logistique
 
-$$acompleter$$
-# Résultats de la deuxième méthode : analyse discriminante sur variables qualitatives
+```{r}
+#| label: setup-logistique
+#| include: false
+#| cache: true
+#| cache.extra: script_signature(c("scripts/04-data_preparation.R", "scripts/06-logistic.R"))
+Sys.setlocale("LC_CTYPE", "French_France.utf8")
+Sys.setlocale("LC_COLLATE", "French_France.utf8")
+# source("scripts/01-import.R")
+source("scripts/06-logistic.R")
 
-Cette partie présente l'application de la méthode DISQUAL à notre problème de prédiction des annulations. L'idée générale consiste à transformer les variables qualitatives en axes factoriels continus à l'aide d'une ACM, puis à utiliser ces axes comme variables explicatives dans des modèles de classification. Nous comparerons donc trois modéles construits sur les axes ACM : la LDA, la QDA et le KNN.
+theme_logit <- theme_minimal(base_size = 10) +
+  theme(
+    legend.position = "bottom",
+    plot.title.position = "plot"
+  )
+
+modele_retenu <- "glm_full"
+
+validation_selected <- logistic_validation_metrics |>
+  dplyr::filter(model == modele_retenu) |>
+  dplyr::slice(1)
+
+selection_selected <- logistic_model_selection_metrics |>
+  dplyr::filter(model == modele_retenu) |>
+  dplyr::slice(1)
+
+comparaison_modeles_logistiques <- logistic_model_selection_metrics |>
+  dplyr::left_join(
+    logistic_validation_metrics |>
+      dplyr::select(
+        model,
+        sensitivity_recall,
+        f1_score
+      ),
+    by = "model"
+  ) |>
+  dplyr::transmute(
+    Modele = model,
+    Type = dplyr::case_when(
+      model_type == "glm_selection" ~ "GLM_selection",
+      model_type == "penalized" ~ "Penalise",
+      TRUE ~ model_type
+    ),
+    AUC = round(auc, 4),
+    Recall = round(sensitivity_recall, 4),
+    `F1-score` = round(f1_score, 4),
+    `Brier score` = round(brier_score, 4),
+    `AIC / AIC approx.` = round(aic_approx, 2),
+    `Coeff. non nuls` = n_nonzero_coefficients,
+    Choix = dplyr::if_else(model == modele_retenu, "Retenu", "")
+  )
+ligne_modele_retenu <- which(comparaison_modeles_logistiques$Modele == modele_retenu)
+
+meilleur_max <- function(values) {
+  values == max(values, na.rm = TRUE)
+}
+
+meilleur_min <- function(values) {
+  values == min(values, na.rm = TRUE)
+}
+
+fmt4 <- function(values) {
+  formatC(values, format = "f", digits = 4)
+}
+
+comparaison_modeles_logistiques_affichage <- comparaison_modeles_logistiques |>
+  dplyr::mutate(
+    Modele = gsub("_", "\\_", Modele, fixed = TRUE),
+    Type = dplyr::case_when(
+      Type == "GLM_selection" ~ "GLM s\\'election",
+      Type == "Penalise" ~ "P\\'enalis\\'e",
+      TRUE ~ Type
+    ),
+    AUC = kableExtra::cell_spec(
+      fmt4(AUC),
+      format = "latex",
+      bold = meilleur_max(AUC)
+    ),
+    Recall = kableExtra::cell_spec(
+      fmt4(Recall),
+      format = "latex",
+      bold = meilleur_max(Recall)
+    ),
+    `F1-score` = kableExtra::cell_spec(
+      fmt4(`F1-score`),
+      format = "latex",
+      bold = meilleur_max(`F1-score`)
+    ),
+    `Brier score` = kableExtra::cell_spec(
+      fmt4(`Brier score`),
+      format = "latex",
+      bold = meilleur_min(`Brier score`)
+    ),
+    `AIC / AIC approx.` = kableExtra::cell_spec(
+      formatC(`AIC / AIC approx.`, format = "f", digits = 2),
+      format = "latex",
+      bold = meilleur_min(`AIC / AIC approx.`)
+    ),
+    `Coeff. non nuls` = kableExtra::cell_spec(
+      as.character(`Coeff. non nuls`),
+      format = "latex",
+      bold = meilleur_min(`Coeff. non nuls`)
+    )
+  )
+if (!exists("glm_full_importance")) {
+  stop(
+    "L'objet glm_full_importance est absent apres execution de scripts/06-logistic.R. ",
+    "Verifier le calcul d'importance du modele complet dans le script logistique.",
+    call. = FALSE
+  )
+}
+
+variables_importantes_logit <- glm_full_importance |>
+  dplyr::transmute(
+    modele = model,
+    variable = original_variable,
+    modalite = term,
+    odds_ratio = odds_ratio,
+    p_value = p.value,
+    importance = importance
+  ) |>
+  dplyr::arrange(dplyr::desc(importance))
+
+variables_importantes_courtes <- variables_importantes_logit |>
+  dplyr::slice_head(n = 8)
+
+importance_variables_modele_retenu <- variables_importantes_logit |>
+  dplyr::group_by(variable) |>
+  dplyr::summarise(
+    importance_totale = sum(importance, na.rm = TRUE),
+    importance_max = max(importance, na.rm = TRUE),
+    nb_modalites = dplyr::n(),
+    .groups = "drop"
+  ) |>
+  dplyr::mutate(
+    importance_relative = importance_totale / sum(importance_totale),
+    importance_moyenne = importance_totale / nb_modalites,
+    variable = forcats::fct_reorder(variable, importance_totale)
+  ) |>
+  dplyr::arrange(dplyr::desc(importance_totale))
+
+variables_importance_top <- importance_variables_modele_retenu |>
+  dplyr::slice_head(n = 3) |>
+  dplyr::pull(variable) |>
+  as.character() |>
+  paste(collapse = ", ")
+```
 
 ## Stratégie de modélisation
 
-L'analyse discriminante sera construite dans une logique strictement prédictive. Comme pour le modéle logistic Les mêmes bases : train, validation et test ont été utilisées. La base train sert à apprendre la représentation factorielle et les modèles ; la base validation sert à choisir le meilleur modéle et le nombre d'axes optimum pour la prédiction, le type de modèle et le seuil de classification ; la base test reste réservée à l'évaluation finale.
+Cette partie présente la construction des modèles de Régression logistique. L’objectif est double : comparer différentes stratégies de sélection de variables et évaluer l’apport des méthodes de régularisation telles que le ridge, le lasso et l’élastic net.
+
+Les modèles sont estimés sur l'échantillon d'apprentissage (train).Dans une première étape le choix du modèle est réalisé sur l'échantillon de validation : l'AUC, le score de Brier et l'AIC (pour glm) ou AIC approximatif(pour pénalisé).
+
+Une fois le modèle retenu, le seuil de classification est optimisé sur l’échantillon de validation à l’aide d’un grid search. Cette procédure consiste à faire varier le seuil de décision de 0,1 à 0,9 afin d’identifier celui qui offre le meilleur compromis entre détection des annulations et précision des prédictions. Cette seconde étape permet ensuite de transformer les probabilités prédites en classes Oui / Non de façon optimal.
+
+La séparation entre le choix du modèle et la détermination du seuil évite de choisir un modèle uniquement parce qu'un seuil particulier lui donne ponctuellement un bon F1-score.
+
+## Résultats et interprétations
+
+Nous présentons les critères de choix des modèles dans la table @tbl-comparaison-modeles-logistiques.
+
+```{r}
+#| label: tbl-comparaison-modeles-logistiques
+#| tbl-cap: "Critères de choix des modèles logistiques sur validation"
+knitr::kable(
+  comparaison_modeles_logistiques_affichage,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  escape = FALSE,
+  col.names = c(
+    "Modèle",
+    "Type",
+    "AUC",
+    "Recall",
+    "F1-score",
+    "Brier score",
+    "AIC / AIC approx.",
+    "Coeff. non nuls",
+    "Choix"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  ) |>
+  kableExtra::row_spec(
+    ligne_modele_retenu,
+    bold = TRUE,
+    background = "#D9EAD3"
+  )
+```
+
+Le modèle retenu est le modèle complet `r modele_retenu`. Ce choix est effectué avant l’optimisation du seuil, à partir des performances observées sur l’échantillon de validation. Les modèles GLM classiques présentent les meilleurs résultats globaux et le meilleur AIC. Les méthodes backward, forward et stepwise donnent des performances quasi identiques au modèle complet, ce qui montre que la sélection automatique ne simplifie pas réellement le modèle.
+
+Les modèles pénalisés, tels que le ridge, le lasso et l’elastic net, n’apportent pas d’amélioration prédictive notable. Leur intérêt est surtout méthodologique, car ils permettent de régulariser les coefficients et de réduire l’importance de certaines modalités. Dans notre cas, cet apport reste limité.
+
+### Interpretation et Importance des variables
+
+La figure @fig-importance-variables-logistique présente l'importance de toutes les variables du modèle retenu `r modele_retenu`. Les barres correspondent à l'importance totale, calculée comme la somme des valeurs absolues des coefficients exprimés en log-odds. La courbe indique l'importance moyenne par modalité, afin de nuancer l'effet du nombre de modalités. Les variables les plus marquantes sont `r variables_importance_top`.
+
+```{r}
+#| label: fig-importance-variables-logistique
+#| fig-cap: "Importance des variables du modèle logistique retenu"
+#| fig-height: 3
+#| fig-width: 5
+importance_variables_modele_retenu |>
+  ggplot(aes(x = variable)) +
+  geom_col(
+    aes(y = importance_totale, fill = "Importance totale"),
+    width = 0.72,
+    alpha = 0.9
+  ) +
+  geom_line(
+    aes(y = importance_moyenne, group = 1, color = "Importance moyenne par modalité"),
+    linewidth = 0.8
+  ) +
+  geom_point(
+    aes(y = importance_moyenne, color = "Importance moyenne par modalité"),
+    size = 2
+  ) +
+  coord_flip() +
+  scale_fill_manual(values = c("Importance totale" = "#1F77B4"), name = NULL) +
+  scale_color_manual(values = c("Importance moyenne par modalité" = "#C9002B"), name = NULL) +
+  scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +
+  labs(
+    x = NULL,
+    y = "Importance",
+    title = "Importance des variables du modèle retenu"
+  ) +
+  theme_logit
+```
+
+L’analyse des odds ratios permet de préciser le sens des effets associés aux principales variables du modèle. Le détail complet des coefficients est présenté en annexe @tbl-annexe-importance-logistique. L’interprétation des odds ratios se fait par rapport à une modalité de référence.
+
+Toutes choses égales par ailleurs, une réservation avec un délai `tres_long` présente des chances d’annulation environ 30,26 fois plus élevées, soit une hausse d’environ 2 926 % des chances d’annulation par rapport aux réservations de `derniere_minute`. Cela confirme le rôle central du délai de réservation `lead_time_cat`.
+
+Pour `previous_cancellations_cat`, les réservations associées à la modalité `Une_ou_plus` ont des chances d’annulation environ 16,11 fois plus élevées par rapport à ceux qui n'ont pas d'antécedent d'annulation connu (`non`). L’historique d’annulation apparaît donc comme un signal fort du risque futur.
+
+Pour `engagement_cat`, par rapport aux individus à engagement `faibles` engagements, ceux ayant un `fort` engagement voient leur chances d’annulation réduites d’environ 91 %. Un engagement élevé du client est donc associé à une plus grande stabilité de la réservation.
+
+Pour `market_segment`, les réservations en lignes provenant des agences de voyages (`Online_TA`) ont des chances d’annulation environ 4,50 fois plus élevées que le `Direct`, soit une hausse d’environ 350 %. Ce résultat suggère que les réservations effectuées via les agences en ligne sont plus exposées au risque d’annulation.
+
+Enfin, pour `identity_location`, par rapport au reste de l'europe `Europe_hors_PRT`, les locaux `Local_Portugal` présente un odds ratio de 9,05, soit des chances d’annulation environ 805 % plus élevées.
+
+## Choix du seuil et discrimination
+
+La figure @fig-annexe-seuil-logistique complète cette lecture en présentant, côte à côte, l'évolution des métriques selon le seuil de classification et la courbe ROC du modèle complet. La courbe ROC synthétise la capacité de discrimination du modèle indépendamment du seuil choisi.
+
+Le modèle complet est donc retenu comme référence principale, car il combine performance prédictive et interprétabilité. Il permet une lecture directe des coefficients et des odds ratios. Après sélection du modèle, le seuil de classification est fixé à `r scales::number(validation_selected$threshold, accuracy = 0.01)`. Sur l’échantillon de validation, l’AUC atteint `r scales::percent(validation_selected$auc, accuracy = 0.1)`, le recall `r scales::percent(validation_selected$sensitivity_recall, accuracy = 0.1)` et le F1-score `r scales::percent(validation_selected$f1_score, accuracy = 0.1)`, ce qui traduit une bonne capacité à détecter les annulations tout en conservant une précision satisfaisante.
+
+```{r}
+#| label: fig-annexe-seuil-logistique
+#| fig-cap: "Seuil de classification et courbe ROC du modèle logistique complet"
+#| fig-height: 3
+#| fig-width: 6.2
+plot_seuil_logit <- threshold_table |>
+  dplyr::select(
+    threshold,
+    accuracy,
+    sensitivity_recall,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  ) |>
+  tidyr::pivot_longer(
+    cols = -threshold,
+    names_to = "metric",
+    values_to = "value"
+  ) |>
+  dplyr::mutate(
+    metric = dplyr::recode(
+      metric,
+      accuracy = "Accuracy",
+      sensitivity_recall = "Recall",
+      specificity = "Spécificité",
+      precision = "Précision",
+      f1_score = "F1-score",
+      balanced_accuracy = "Balanced acc."
+    )
+  ) |>
+  ggplot(aes(x = threshold, y = value, color = metric)) +
+  geom_line(linewidth = 0.8) +
+  geom_vline(
+    xintercept = validation_selected$threshold,
+    linetype = "dashed",
+    color = "black"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    x = "Seuil de classification",
+    y = "Valeur",
+    color = NULL
+  ) +
+  theme_logit +
+  guides(
+    color = guide_legend(nrow = 2, byrow = TRUE)
+  ) +
+  theme(
+    legend.text = element_text(size = 7.5),
+    legend.key.width = grid::unit(0.7, "cm"),
+    legend.spacing.x = grid::unit(0.12, "cm")
+  )
+
+plot_roc_logit <- logit_validation_roc_curve |>
+  ggplot(aes(x = false_positive_rate, y = true_positive_rate)) +
+  geom_abline(linetype = "dashed", color = "grey60") +
+  geom_path(color = "#C9002B", linewidth = 0.9) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1), expand = FALSE) +
+  labs(
+    x = "1 - Spécificité",
+    y = "Recall",
+    title = paste0("ROC - AUC = ", scales::percent(validation_selected$auc, accuracy = 0.1))
+  ) +
+  theme_logit +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 10, face = "bold")
+  )
+
+plot_seuil_logit + plot_roc_logit + patchwork::plot_layout(widths = c(1.25, 1))
+```
+
+Pour l'évaluation de la calibration du modèle, nous avons privilegié le score de Brier au test de Hosmer-Lemeshow, compte tenu de la sensibilité extrême de ce dernier en présence d’un échantillon de grande taille. Le score de Brier nous donne ainsi mesure plus stable et plus lisible dans notre contexte.
+
+Le score de Brier du modèle retenu est de `r scales::number(selection_selected$brier_score, accuracy = 0.0001)`. Il mesure directement l'écart moyen entre les probabilités prédites et les annulations observées : plus il est faible, meilleure est la qualité probabiliste du modèle.
+
+\newpage
+
+## Conclusion
+
+En synthèse, la régression logistique complète est retenue comme modèle de référence. Elle offre un bon compromis entre performance prédictive et interprétabilité, tout en permettant d’identifier les facteurs les plus associés à l’annulation. Les variables liées au délai de réservation, à l’engagement du client et au canal de réservation apparaissent comme les plus dominantes.
+
+Le lasso reste utile comme analyse complémentaire, mais il ne simplifie que modérément le modèle. Il conserve 23 modalités explicatives, soit 24 coefficients non nuls avec l’intercept. Cela confirme que le choix du modèle complet reste cohérent avec l’objectif d’interprétation du rapport.
+
+# Résultats de la deuxième méthode : analyse discriminante sur variables qualitatives
+
+Cette partie présente l'application de la méthode DISQUAL à notre problème de prédiction des annulations. L'idée générale consiste à transformer les variables qualitatives en axes factoriels continus à l'aide d'une ACM, puis à utiliser ces axes comme variables explicatives dans des modèles de classification. Nous comparons donc trois modèles construits sur les axes ACM : la LDA, la QDA et le KNN.
+
+## Stratégie de modélisation
+
+L'analyse discriminante est construite dans une logique strictement prédictive. Comme pour le modèle logistique, les mêmes bases train, validation et test ont été utilisées. La base train sert à apprendre la représentation factorielle et les modèles ; la base validation sert à choisir le meilleur modèle, le nombre d'axes optimal pour la prédiction et le seuil de classification ; la base test reste réservée à l'évaluation finale.
 
 <!-- Une attention particulière a été portée au risque de fuite d'information. Pour la phase de sélection, l'ACM est estimée uniquement sur la base train. Les individus de validation et de test sont ensuite projetés comme individus supplémentaires. Ainsi, la structure factorielle utilisée pour sélectionner le modèle ne dépend pas des observations de validation ni de test. -->
 
@@ -357,9 +674,9 @@ La sélection du modèle se fait en deux temps. Premièrement, on compare plusie
 
 Deuxièmement, une fois le meilleur couple modèle / nombre d'axes retenu, le seuil de classification est optimisé sur validation, principalement à partir du F1-score afin de mieux équilibrer précision et rappel sur la classe des réservations annulées.
 
-Après cette sélection, le modèle final est recalibré en utilisant train + validation pour l'ACM finale. La base test est alors projetée en individu supplémentaire, puis utilisée une seule fois pour mesurer la performance finale. Cette stratégie permet d'utiliser d'avantage de données pour le modèle final tout en conservant une évaluation précise et stricte sur la base test.
+Après cette sélection, le modèle final est recalibré en utilisant train + validation pour l'ACM finale. La base test est alors projetée en individu supplémentaire, puis utilisée une seule fois pour mesurer la performance finale. Cette stratégie permet d'utiliser davantage de données pour le modèle final tout en conservant une évaluation précise et stricte sur la base test.
 
-## Construction de l'ACM et interpretation des axes
+## Construction de l'ACM et interprétation des axes
 
 ```{r}
 #| label: setup-acm-axes-validation
@@ -367,8 +684,8 @@ Après cette sélection, le modèle final est recalibré en utilisant train + va
 #| cache: true
 #| cache.extra: script_signature(c("scripts/04-data_preparation.R", "scripts/05-Analyse Discriminante.R"))
 
-# Section autonome : elle recharge l'ACM de selection, la cible en
-# variable supplementaire et les objets d'interpretation des axes.
+# Section autonome : elle recharge l'ACM de sélection, la cible en
+# variable supplémentaire et les objets d'interprétation des axes.
 invisible(capture.output(source("scripts/05-Analyse Discriminante.R")))
 
 knitr::opts_chunk$set(
@@ -386,21 +703,21 @@ theme_acm <- theme_minimal(base_size = 12) +
   )
 ```
 
-### Role de l'ACM dans la methode DISQUAL
+### Rôle de l'ACM dans la méthode DISQUAL
 
-L'analyse des correspondances multiples (ACM) est l'etape qui transforme les variables qualitatives en axes factoriels continus. Dans notre cas, les variables explicatives sont des profils de reservation : type d'hotel, segment de marche, type de client, delai de reservation, duree du sejour, niveau de prix, presence d'enfants, engagement, historique d'annulation, saison touristique et origine du client.
+L'analyse des correspondances multiples (ACM) est l'étape qui transforme les variables qualitatives en axes factoriels continus. Dans notre cas, les variables explicatives sont des profils de réservation : type d'hôtel, segment de marché, type de client, délai de réservation, durée du séjour, niveau de prix, présence d'enfants, engagement, historique d'annulation, saison touristique et origine du client.
 
-L'ACM permet donc de passer d'une lecture variable par variable à une lecture en **profils**. Chaque axe oppose des combinaisons de modalites. <!-- Un individu positionne du cote positif d'un axe partage davantage les modalites positives de cet axe ; un individu positionne du cote negatif partage davantage les modalites negatives. -->
+L'ACM permet donc de passer d'une lecture variable par variable à une lecture en **profils**. Chaque axe oppose des combinaisons de modalités. <!-- Un individu positionné du côté positif d'un axe partage davantage les modalités positives de cet axe ; un individu positionné du côté négatif partage davantage les modalités négatives. -->
 
-<!-- Dans une logique predictive, l'ACM est estimee uniquement sur la base d'entrainement. Les bases validation et test sont projetees comme individus supplementaires. Cette strategie evite toute fuite d'information : les axes utilises pour selectionner les modeles ne sont pas construits avec les donnees de validation ou de test. -->
+<!-- Dans une logique prédictive, l'ACM est estimée uniquement sur la base d'entraînement. Les bases validation et test sont projetées comme individus supplémentaires. Cette stratégie évite toute fuite d'information : les axes utilisés pour sélectionner les modèles ne sont pas construits avec les données de validation ou de test. -->
 
-La variable cible `is_canceled` est ajoutee comme variable qualitative supplementaire. Elle ne participe donc pas a la construction des axes, mais elle est projetee sur ces axes pour verifier si les profils factoriels sont lies au risque d'annulation.
+La variable cible `is_canceled` est ajoutée comme variable qualitative supplémentaire. Elle ne participe donc pas à la construction des axes, mais elle est projetée sur ces axes pour vérifier si les profils factoriels sont liés au risque d'annulation.
 
 \FloatBarrier
 
 ### Inertie des axes factoriels
 
-L'inertie indique la part de structure du tableau disjonctif expliquee par chaque axe. L'inertie expliquée par les 5 premiers axes (33%) est representée dans le tableau ci dessous.
+L'inertie indique la part de structure du tableau disjonctif expliquée par chaque axe. L'inertie expliquée par les 5 premiers axes (33 %) est représentée dans le tableau ci-dessous.
 
 ```{r}
 #| label: tbl-acm-eigenvalues-validation
@@ -414,36 +731,36 @@ acm_axis_interpretation$eigenvalues |>
     format = "latex",
     booktabs = TRUE,
     row.names = FALSE,
-    col.names = c("Axe", "Valeur propre", "Inertie (%)", "Inertie cumulee (%)")
+    col.names = c("Axe", "Valeur propre", "Inertie (%)", "Inertie cumulée (%)")
   ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 8
   )
 ```
 
-On note que nous avons 26 axes au total. En annexe, la représentation de l'inertie de l'ensemble des axes dans la figure @fig-acm-scree-all
+On note que nous avons 26 axes au total. En annexe, la représentation de l'inertie de l'ensemble des axes est disponible dans la figure @fig-acm-scree-all.
 
 \FloatBarrier
 
-### Représentation et interpretation des axes
+### Représentation et interprétation des axes
 
-<!-- L'interpretation des axes combine quatre elements : -->
+<!-- L'interprétation des axes combine quatre éléments : -->
 
 <!-- - l'inertie de l'axe ; -->
 
-<!-- - les modalites les plus contributives ; -->
+<!-- - les modalités les plus contributives ; -->
 
-<!-- - les modalites les mieux representees ; -->
+<!-- - les modalités les mieux représentées ; -->
 
-<!-- - la position de la cible `is_canceled` projetee en supplementaire. -->
+<!-- - la position de la cible `is_canceled` projetée en supplémentaire. -->
 
-La représentation graphique suivante affiche les modalites les plus contributives sur les deux premiers axes factoriels. Les libelles utilisent la forme `variable = modalite`. La cible est ajoutee en bleu comme variable supplementaire. Ainsi, le graphique montre a la fois la structure des profils et la position descriptive de l'annulation.
+La représentation graphique suivante affiche les modalités les plus contributives sur les deux premiers axes factoriels. Les libellés utilisent la forme `variable = modalité`. La cible est ajoutée en bleu comme variable supplémentaire. Ainsi, le graphique montre à la fois la structure des profils et la position descriptive de l'annulation.
 
 ```{r}
 #| label: fig-acm-plane-12-validation
-#| fig-cap: "Plan factoriel 1-2 avec modalites labellisees"
+#| fig-cap: "Plan factoriel 1-2 avec modalités labellisées"
 #| fig-width: 6.8
 #| fig-height: 4.9
 #| out-width: "88%"
@@ -457,11 +774,11 @@ Nous pouvons ainsi interpréter précisément les axes obtenus:
 
 L’axe 1 oppose, du côté négatif, des réservations à engagement apparent fort, caractérisées notamment par la présence d’enfants, un prix élevé et un niveau d’engagement important, à des profils situés du côté positif, davantage marqués par un historique d’annulation, certains segments de marché et des canaux de réservation spécifiques. La projection de `is_canceled = Oui` du côté positif suggère que les annulations sont descriptivement plus associées aux profils présentant un risque historique ou commercial qu’aux réservations traduisant un engagement plus fort dans le séjour.
 
-#### Axe 2 : temporalité de réservation et mode de commercialisation
+#### Axe 2 : Délai de réservation et mode de commercialisation
 
-L’axe 2 traduit principalement une opposition liée au délai de réservation et au mode de commercialisation. Il distingue les réservations très anticipées ou intermédiées par des canaux offline, associées notamment aux clients contractuels, des réservations de dernière minute, corporate ou de groupe. D’un point de vue métier, cet axe montre que le risque d’annulation dépend fortement de la combinaison entre temporalité de décision, canal de réservation et type de client. .
+L’axe 2 traduit principalement une opposition liée au délai de réservation et au mode de commercialisation. Il distingue les réservations très anticipées ou intermédiées par des canaux offline, associées notamment aux clients contractuels, des réservations de dernière minute, corporate ou de groupe. D’un point de vue métier, cet axe montre que le risque d’annulation dépend fortement du délai et du canal de réservation ainsi que du type de client.
 
-Une representation des autres axes 3,4 et 5 est en annexe @fig-acm-plane-34-validation et @fig-acm-plane-15-validation ainsi que des modalités structurantes sur chaque axe sur @fig-acm-contrib-validation
+Une représentation des autres axes 3, 4 et 5 est disponible en annexe @fig-acm-plane-34-validation et @fig-acm-plane-15-validation ainsi que des modalités structurantes sur chaque axe sur @fig-acm-contrib-validation
 
 \FloatBarrier
 
@@ -471,9 +788,9 @@ Avant la grid search, nous évaluons les hypothèses statistiques associées aux
 
 La normalité est étudiée à deux niveaux : axe par axe avec le test de Shapiro-Wilk, puis globalement avec les tests multivariés de Mardia et de Henze-Zirkler. L’homogénéité des matrices de covariance entre les deux classes de `is_canceled` est vérifiée avec le test de Box’s M. Les résultats détaillés de ces diagnostics sont présentés dans les tableaux @tbl-shapiro-axes-acm, @tbl-normalite-multivariee-acm et @tbl-box-m-acm.
 
-Ces tests ne déterminent pas directement le modèle final, mais ils éclairent la validité théorique de la LDA et de la QDA. Si la normalité ou l’homogénéité des covariances sont rejetées, les modèles restent utilisables comme classifieurs prédictifs, mais leur interprétation probabiliste doit être nuancée. Le choix final repose donc principalement sur la performance observée en validation, via la sélection du nombre d’axes, du modéle et du seuil de classification.
+Ces tests ne déterminent pas directement le modèle final, mais ils éclairent la validité théorique de la LDA et de la QDA. Si la normalité ou l’homogénéité des covariances sont rejetées, les modèles restent utilisables comme classifieurs prédictifs, mais leur interprétation probabiliste doit être nuancée. Le choix final repose donc principalement sur la performance observée en validation, via la sélection du nombre d’axes, du modèle et du seuil de classification.
 
-## Choix du meilleur modéle et du nombre d'axes optimum
+## Choix du meilleur modèle et du nombre d'axes optimal
 
 Le nombre d'axes ACM ne doit pas être choisi uniquement à partir de l'inertie factorielle. Dans notre cadre, l'objectif est prédictif : nous cherchons le nombre d'axes qui améliore réellement la capacité à distinguer les réservations annulées des réservations non annulées. Pour cette raison, une grille de recherche est appliquée sur la base validation.
 
@@ -524,7 +841,7 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -547,7 +864,7 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -623,7 +940,7 @@ table_gains_marginaux <- knitr::kable(
   escape = FALSE
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -644,7 +961,7 @@ table_gains_marginaux
 
 <!-- Au regard des résultats de validation, le modèle retenu est celui qui présente la meilleure AUC, puis le meilleur F1-score en cas de performances proches. Dans notre cas, la sélection retient le modèle `r discriminant_method_recap$selected_model`, avec `r discriminant_method_recap$selected_n_axes` axes ACM. Pour le KNN, la valeur retenue est `k = r discriminant_method_recap$selected_knn_k`. -->
 
-Une représentation graphique de l'evolution de l'AUC @fig-grid-auc-discriminante et du F1 score @fig-grid-f1-discriminante par modéle est disponible en annexe
+Une représentation graphique de l'évolution de l'AUC (@fig-grid-auc-discriminante) et du F1-score (@fig-grid-f1-discriminante) par modèle est disponible en annexe.
 
 ## Choix du seuil de classification
 
@@ -695,7 +1012,7 @@ knitr::kable(
   )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -705,11 +1022,11 @@ knitr::kable(
 
 \newpage
 
-\floatplacement{table}{htbp}
+\floatplacement{table}{H}
 
 # Comparaison des résultats et conclusion
 
-Cette derniere partie confronte les deux approches sur la base test, qui n'a pas ete utilisee pour choisir les variables, le nombre d'axes, les hyperparametres ou les seuils. Elle donne donc la mesure la plus honnete de la capacite de generalisation des modeles.
+Cette dernière partie confronte les deux approches sur la base test, qui n'a pas été utilisée pour choisir les variables, le nombre d'axes, les hyperparamètres ou les seuils. Elle donne donc la mesure la plus honnête de la capacité de généralisation des modèles.
 
 ```{r}
 #| label: setup-comparaison-finale
@@ -721,7 +1038,7 @@ invisible(capture.output(source("scripts/07- Comparaison.R")))
 
 ```{r}
 #| label: tbl-comparaison-test
-#| tbl-cap: "Performance finale des modeles sur la base test"
+#| tbl-cap: "Performance finale des modèles sur la base test"
 comparison_test_report <- comparison_test_metrics |>
   dplyr::select(
     model,
@@ -742,13 +1059,13 @@ knitr::kable(
   row.names = FALSE,
   digits = 4,
   col.names = c(
-    "Modele",
+    "Modèle",
     "Seuil",
     "Accuracy",
     "AUC",
     "Recall",
-    "Specificite",
-    "Precision",
+    "Spécificité",
+    "Précision",
     "F1-score",
     "Balanced accuracy"
   )
@@ -771,11 +1088,16 @@ comparison_test_metrics |>
     values_to = "value"
   ) |>
   dplyr::mutate(
+    model = dplyr::case_when(
+      stringr::str_detect(model, "^ACM \\+ KNN") ~ "ACM + KNN\n(15 axes, k=15)",
+      stringr::str_detect(model, "^Regression logistique|^Régression logistique") ~ "Logistique complète",
+      TRUE ~ model
+    ),
     metric = dplyr::recode(
       metric,
       auc = "AUC",
       sensitivity_recall = "Recall",
-      precision = "Precision",
+      precision = "Précision",
       f1_score = "F1-score",
       balanced_accuracy = "Balanced accuracy"
     )
@@ -786,36 +1108,76 @@ comparison_test_metrics |>
   labs(
     x = "Valeur sur test",
     y = NULL,
-    fill = "Modele"
+    fill = "Modèle"
   ) +
   theme_minimal(base_size = 12) +
-  theme(legend.position = "bottom")
+  guides(
+    fill = guide_legend(nrow = 2, byrow = TRUE)
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 9),
+    legend.key.width = grid::unit(0.7, "cm")
+  )
 ```
 
-La regression logistique conserve l'avantage d'etre plus directement interpretable : elle fournit des odds ratios et permet de quantifier l'effet des modalites sur la probabilite d'annulation. Elle constitue donc un modele de reference solide pour expliquer les facteurs de risque.
+La régression logistique conserve l'avantage d'être plus directement interprétable : elle fournit des odds ratios et permet de quantifier l'effet des modalités sur la probabilité d'annulation. Elle constitue donc un modèle de référence solide pour expliquer les facteurs de risque.
 
-L'approche DISQUAL, fondee sur l'ACM puis la classification, capte davantage la structure globale des profils qualitatifs. Dans notre evaluation finale, le meilleur modele global est `r best_model_test$model`, avec une AUC de `r round(best_model_test$auc, 3)` et un F1-score de `r round(best_model_test$f1_score, 3)`. Ce resultat indique que la representation factorielle suivie du classifieur retenu apporte un gain predictif sur la detection des annulations.
+L'approche DISQUAL, fondée sur l'ACM puis la classification, capte davantage la structure globale des profils qualitatifs. Dans notre évaluation finale, le meilleur modèle global est `r best_model_test$model`, avec une AUC de `r round(best_model_test$auc, 3)` et un F1-score de `r round(best_model_test$f1_score, 3)`. Ce résultat indique que la représentation factorielle suivie du classifieur retenu apporte un gain prédictif sur la détection des annulations.
 
-Sur le plan operationnel, le modele peut servir a prioriser les reservations a risque : les observations predites comme annulees peuvent faire l'objet d'une relance, d'une politique de garantie adaptee ou d'une surveillance plus fine. Cette utilisation doit toutefois rester prudente : l'objectif n'est pas de sanctionner un client, mais d'anticiper le risque de no-show ou d'annulation afin d'aider la gestion hoteliere.
+Sur le plan opérationnel, le modèle peut servir à prioriser les réservations à risque : les observations prédites comme annulées peuvent faire l'objet d'une relance, d'une politique de garantie adaptée ou d'une surveillance plus fine. Cette utilisation doit toutefois rester prudente : l'objectif n'est pas de sanctionner un client, mais d'anticiper le risque de no-show ou d'annulation afin d'aider la gestion hôtelière.
 
 \newpage
 
 # Sources des données et références {#sec-sources}
 
-La base utilisée provient du jeu de données *Hotel Booking Demand Datasets*, diffusé sur Kaggle et documenté dans l'article scientifique publié dans *Data in Brief* : [Hotel Booking Demand Datasets](https://www.sciencedirect.com/science/article/pii/S2352340918315191). Les références méthodologiques relatives à la régression logistique et à l'analyse discriminante sur variables qualitatives seront complétées dans cette section.
+## Reproductibilité
+
+L’ensemble du code source, des scripts d’analyse et des documents associés au projet est disponible sur le dépôt GitHub suivant :
+
+- Dépôt GitHub du projet : <https://github.com/hamzaassal/STA201_Projet.git>
+
+## Données
+
+- La base utilisée provient du jeu de données *Hotel Booking Demand Datasets*, diffusé sur Kaggle et documenté dans l'article scientifique publié dans *Data in Brief* : [Hotel Booking Demand Datasets](https://www.sciencedirect.com/science/article/pii/S2352340918315191).
+
+## Supports de cours
+
+- Cours de STA201 - Régression logistique. Document de cours : *logistic regr FR.pdf*.
+
+- Cours de STA201 - Analyse discriminante, classification supervisée et scoring.
+
+## Références méthodologiques
+
+- Hosmer, D. W., Lemeshow, S. et Sturdivant, R. X. (2013). *Applied Logistic Regression* (3rd ed.). Wiley.\
+  <https://www.wiley-vch.de/en/areas-interest/mathematics-statistics/statistics-16st/regression-analysis-16st4/applied-logistic-regression-978-0-470-58247-3>
+
+- Fawcett, T. (2006). *An Introduction to ROC Analysis*. Pattern Recognition Letters, 27(8), 861-874.\
+  <https://doi.org/10.1016/j.patrec.2005.10.010>
+
+- Brier, G. W. (1950). *Verification of Forecasts Expressed in Terms of Probability*. Monthly Weather Review, 78(1), 1-3.\
+  <https://journals.ametsoc.org/view/journals/mwre/78/1/1520-0493_1950_078_0001_vofeit_2_0_co_2.xml>
 
 - Ghojogh, B. et Crowley, M. (2019). *Linear and Quadratic Discriminant Analysis: Tutorial*. arXiv:1906.02590. <https://arxiv.org/abs/1906.02590>
+
 - Stanford University. *Discriminant Analysis*, STATS305C. <https://web.stanford.edu/class/stats305c/lectures/Discriminant_analysis.html>
+
 - James, G., Witten, D., Hastie, T. et Tibshirani, R. *An Introduction to Statistical Learning*. Voir le chapitre sur la classification. <https://www.statlearning.com/>
+
 - Documentation R `DiscriMiner::disqual`. *Discriminant Analysis on Qualitative Variables*. <https://www.rdocumentation.org/packages/DiscriMiner/versions/0.1-29/topics/disqual>
+
 - Cnam. *Cours - Méthodes factorielles*. <https://cedric.cnam.fr/vertigo/Cours/RCP208/coursMethodesFactorielles.html>
+
 - Saporta, G. (2006). *Probabilités, analyse des données et statistique*. Technip.
 
 \newpage
 
 # Annexes
 
-## Tableaux complémentaires
+Les annexes suivent le même ordre que le corps du rapport : présentation et préparation des données, démarche générale, modèle logistique, puis analyse discriminante sur variables qualitatives. Cette organisation permet de conserver une numérotation des tableaux et figures cohérente avec le déroulé de l'analyse.
+
+## Annexe A - Base, préparation des données et statistiques descriptives
 
 ```{r}
 #| label: tbl-dico
@@ -858,6 +1220,27 @@ knitr::kable(
 ```
 
 ```{r}
+#| label: tbl-cleaning-recap
+#| tbl-cap: "Synthèse des contrôles et traitements de cohérence"
+knitr::kable(
+  table_cleaning_recap,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  col.names = c("Critère", "Effectif", "Pourcentage", "Décision")
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 8
+  ) |>
+  kableExtra::column_spec(1, width = "5.0cm") |>
+  kableExtra::column_spec(2, width = "2.0cm") |>
+  kableExtra::column_spec(3, width = "2.5cm") |>
+  kableExtra::column_spec(4, width = "2.0cm")
+```
+
+```{r}
 #| label: tbl-variables-creees
 #| tbl-cap: "Variables construites pour l'analyse"
 knitr::kable(
@@ -886,10 +1269,11 @@ knitr::kable(
 
 ```{r}
 #| label: fig-stat_generales
-#| fig-cap: "Analyses bivariées en fonction de la variable d'intérêt"
-#| fig-width: 8.4
-#| fig-height: 9.2
-#| out-width: "96%"
+#| fig-cap: "Analyses bivariées : répartition de l'annulation et poids des modalités"
+#| fig-width: 10
+#| fig-height: 9.8
+#| out-width: "98%"
+#| fig-pos: "H"
 final_bivariate_plot_all
 ```
 
@@ -899,35 +1283,169 @@ final_bivariate_plot_all
 #| fig-width: 8.5
 #| fig-height: 7
 #| out-width: "95%"
+#| fig-pos: "H"
 HEATMAP_CRAMER
 ```
 
-## Objectif de l'étude et démarche choisie
+\FloatBarrier
 
-![Démarche de modélisation](assets/decoupage_demarche.png){#fig-schema width="80%"}
+## Annexe B - Objectif de l'étude et démarche choisie
 
 ```{r}
-#| label: tbl-cleaning-recap
-#| tbl-cap: "Synthèse des contrôles et traitements de cohérence"
+#| label: fig-schema
+#| fig-cap: "Démarche de modélisation"
+#| out-width: "80%"
+#| fig-pos: "H"
+knitr::include_graphics("assets/decoupage_demarche.png")
+```
+
+\FloatBarrier
+
+## Annexe C - Modèle logistique
+
+### Comparaison des modèles logistiques sur validation
+
+```{r}
+#| label: tbl-annexe-validation-logistique
+#| tbl-cap: "Performances prédictives des modèles logistiques sur validation"
+logistic_validation_report <- logistic_validation_metrics |>
+  dplyr::select(
+    model,
+    model_type,
+    accuracy,
+    auc,
+    sensitivity_recall,
+    specificity,
+    precision,
+    f1_score,
+    balanced_accuracy
+  )
+
 knitr::kable(
-  table_cleaning_recap,
+  logistic_validation_report,
   format = "latex",
   booktabs = TRUE,
   row.names = FALSE,
-  col.names = c("Critère", "Effectif", "Pourcentage", "Décision")
+  digits = 4,
+  col.names = c(
+    "Modèle",
+    "Type",
+    "Accuracy",
+    "AUC",
+    "Recall",
+    "Spécificité",
+    "Précision",
+    "F1-score",
+    "Balanced accuracy"
+  )
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("HOLD_position", "scale_down"),
     full_width = FALSE,
-    font_size = 8
-  ) |>
-  kableExtra::column_spec(1, width = "5.0cm") |>
-  kableExtra::column_spec(2, width = "2.0cm") |>
-  kableExtra::column_spec(3, width = "2.5cm") |>
-  kableExtra::column_spec(4, width = "2.0cm")
+    font_size = 7
+  )
 ```
 
-## Annexe - Analyse discriminante sur variables qualitatives
+### AIC et complexité
+
+```{r}
+#| label: tbl-annexe-aic-logistique
+#| tbl-cap: "AIC et AIC approximatif des modèles logistiques"
+aic_logistique_report <- logistic_aic_table |>
+  dplyr::mutate(
+    dplyr::across(
+      where(is.numeric),
+      \(x) dplyr::if_else(is.na(x), "-", as.character(round(x, 4)))
+    ),
+    dplyr::across(
+      where(is.character),
+      \(x) dplyr::if_else(is.na(x), "-", x)
+    )
+  )
+
+knitr::kable(
+  aic_logistique_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  col.names = c(
+    "Modèle",
+    "Type",
+    "Alpha",
+    "Lambda 1se",
+    "Log-vraisemblance train",
+    "Coefficients non nuls",
+    "AIC / AIC approx."
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+### Variables importantes du modèle complet
+
+```{r}
+#| label: tbl-annexe-importance-logistique
+#| tbl-cap: "Variables ou modalités les plus importantes du modèle logistique complet"
+knitr::kable(
+  variables_importantes_logit |>
+    dplyr::slice_head(n = 26),
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modèle",
+    "Variable",
+    "Modalité",
+    "Odds ratio",
+    "p-value",
+    "Importance"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+```{r}
+#| label: tbl-annexe-importance-penalisee
+#| tbl-cap: "Importance agrégée des variables dans les modèles pénalisés"
+penalized_importance_report <- penalized_variable_importance |>
+  dplyr::group_by(model) |>
+  dplyr::slice_max(importance_relative, n = 5) |>
+  dplyr::ungroup()
+
+knitr::kable(
+  penalized_importance_report,
+  format = "latex",
+  booktabs = TRUE,
+  row.names = FALSE,
+  digits = 4,
+  col.names = c(
+    "Modèle",
+    "Variable",
+    "Modalités retenues",
+    "Importance somme",
+    "Importance max",
+    "Importance relative"
+  )
+) |>
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    full_width = FALSE,
+    font_size = 7
+  )
+```
+
+\FloatBarrier
+
+## Annexe D - Analyse discriminante sur variables qualitatives
 
 \floatplacement{table}{H}
 
@@ -972,11 +1490,11 @@ eig_all_axes |>
 
 \FloatBarrier
 
-### Représentation et interpretation des axes
+### Représentation et interprétation des axes
 
 ```{r}
 #| label: fig-acm-plane-34-validation
-#| fig-cap: "Plan factoriel 3-4 avec modalites labellisees"
+#| fig-cap: "Plan factoriel 3-4 avec modalités labellisées"
 #| fig-width: 6.8
 #| fig-height: 4.9
 #| out-width: "88%"
@@ -984,23 +1502,23 @@ eig_all_axes |>
 plot_mca_modalities_labeled(c(3, 4), top_n = 26, label_size = 2.5)
 ```
 
-#### Axe 3 : nature du sejour et saisonnalite
+#### Axe 3 : nature du séjour et saisonnalité
 
-L'axe 3 oppose des profils market_segment = Corporate, identity_location = Other_International et saison_tourisme = basse_saison a des profils customer_type = Contract, total_nights_cat = long_sejour et hotel = Resort Hotel.
+L'axe 3 oppose des profils market_segment = Corporate, identity_location = Other_International et saison_tourisme = basse_saison à des profils customer_type = Contract, total_nights_cat = long_sejour et hotel = Resort Hotel.
 
-Interpretation metier : cet axe distingue une logique plus professionnelle/internationale ou basse saison d'une logique plus touristique, resort et long sejour. Il structure donc les motivations probables du sejour. Cette distinction est importante car une reservation business, un sejour resort et un long sejour ne portent pas les memes contraintes d'annulation.
+Interprétation métier : cet axe distingue une logique plus professionnelle/internationale ou basse saison d'une logique plus touristique, resort et long séjour. Il structure donc les motivations probables du séjour. Cette distinction est importante car une réservation business, un séjour resort et un long séjour ne portent pas les mêmes contraintes d'annulation.
 
-#### Axe 4 : volatilite operationnelle autour du sejour
+#### Axe 4 : volatilité opérationnelle autour du séjour
 
-L'axe 4 oppose customer_type = Group, total_nights_cat = long_sejour et customer_type = Contract a previous_cancellations_cat = Une_ou_plus, has_children = Oui et lead_time_cat = derniere_minute. Les contributions de adr_cat = q4_high, saison_tourisme = basse_saison, saison_tourisme = pick_saison, total_nights_cat = court_sejour et hotel = Resort Hotel montrent que cet axe combine prix, saison et structure du sejour.
+L'axe 4 oppose customer_type = Group, total_nights_cat = long_sejour et customer_type = Contract à previous_cancellations_cat = Une_ou_plus, has_children = Oui et lead_time_cat = derniere_minute. Les contributions de adr_cat = q4_high, saison_tourisme = basse_saison, saison_tourisme = pick_saison, total_nights_cat = court_sejour et hotel = Resort Hotel montrent que cet axe combine prix, saison et structure du séjour.
 
-Interpretation metier : cet axe capte une forme de volatilite operationnelle. Les reservations courtes, cheres, saisonnieres ou associees a un historique d'annulation peuvent etre plus difficiles a stabiliser. La position de `is_canceled_Oui` sur cet axe confirme que cette dimension contient une information pertinente pour la prediction.
+Interprétation métier : cet axe capte une forme de volatilité opérationnelle. Les réservations courtes, chères, saisonnières ou associées à un historique d'annulation peuvent être plus difficiles à stabiliser. La position de `is_canceled_Oui` sur cet axe confirme que cette dimension contient une information pertinente pour la prédiction.
 
 \FloatBarrier
 
 ```{r}
 #| label: fig-acm-plane-15-validation
-#| fig-cap: "Plan factoriel 1-5 avec modalites labellisees"
+#| fig-cap: "Plan factoriel 1-5 avec modalités labellisées"
 #| fig-width: 6.8
 #| fig-height: 4.9
 #| out-width: "88%"
@@ -1010,15 +1528,15 @@ plot_mca_modalities_labeled(c(1, 5), top_n = 26, label_size = 2.5)
 
 #### Axe 5 : canal, prix et saison
 
-L'axe 5 oppose market_segment = Other, engagement_cat = fort et has_children = Oui a customer_type = Group, customer_type = Contract et lead_time_cat = derniere_minute. Les contributions de market_segment = Other, market_segment = Offline_TA, adr_cat = q3_midhigh, saison_tourisme = haute_saison et lead_time_cat = derniere_minute indiquent que cet axe combine canal, niveau de prix et saison.
+L'axe 5 oppose market_segment = Other, engagement_cat = fort et has_children = Oui à customer_type = Group, customer_type = Contract et lead_time_cat = derniere_minute. Les contributions de market_segment = Other, market_segment = Offline_TA, adr_cat = q3_midhigh, saison_tourisme = haute_saison et lead_time_cat = derniere_minute indiquent que cet axe combine canal, niveau de prix et saison.
 
-Interpretation metier : cet axe affine la lecture du risque en distinguant des profils commerciaux et saisonniers. Il ne represente pas un seul facteur simple, mais une combinaison de contexte de reservation, de prix et de periode touristique.
+Interprétation métier : cet axe affine la lecture du risque en distinguant des profils commerciaux et saisonniers. Il ne représente pas un seul facteur simple, mais une combinaison de contexte de réservation, de prix et de période touristique.
 
 \FloatBarrier
 
 ```{r}
 #| label: fig-acm-contrib-validation
-#| fig-cap: "Modalites les plus contributives aux premiers axes"
+#| fig-cap: "Modalités les plus contributives aux premiers axes"
 #| fig-width: 7.5
 #| fig-height: 7.2
 #| fig-pos: "H"
@@ -1046,8 +1564,8 @@ ggplot(top_contrib_plot, aes(x = contribution, y = label_axis, fill = axis)) +
   facet_wrap(~axis, scales = "free_y", ncol = 2) +
   scale_y_discrete(labels = \(x) stringr::str_remove(x, "^Dim [0-9]+___")) +
   labs(
-    title = "Modalites structurantes des axes ACM",
-    x = "Contribution a l'axe",
+    title = "Modalités structurantes des axes ACM",
+    x = "Contribution à l'axe",
     y = NULL
   ) +
   theme_acm +
@@ -1057,7 +1575,7 @@ ggplot(top_contrib_plot, aes(x = contribution, y = label_axis, fill = axis)) +
   )
 ```
 
-Les contributions indiquent quelles modalites construisent vraiment chaque axe. Une modalite peut etre eloignee du centre sans etre la plus structurante ; inversement, une modalite fortement contributive doit etre integree a l'interpretation de l'axe.
+Les contributions indiquent quelles modalités construisent vraiment chaque axe. Une modalité peut être éloignée du centre sans être la plus structurante ; inversement, une modalité fortement contributive doit être intégrée à l'interprétation de l'axe.
 
 \FloatBarrier
 
@@ -1075,7 +1593,7 @@ knitr::kable(
   col.names = c("Axe", "Statistique", "p-value", "Conclusion")
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -1083,7 +1601,7 @@ knitr::kable(
 
 ```{r}
 #| label: tbl-normalite-multivariee-acm
-#| tbl-cap: "Tests de normalite multivariee sur les axes ACM candidats"
+#| tbl-cap: "Tests de normalité multivariée sur les axes ACM candidats"
 normality_multivariate_table <- dplyr::bind_rows(
   mardia_test_table,
   henze_zirkler_test_table
@@ -1101,7 +1619,7 @@ knitr::kable(
   digits = 4
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -1109,17 +1627,17 @@ knitr::kable(
 
 ```{r}
 #| label: tbl-box-m-acm
-#| tbl-cap: "Test de Box M pour l'homogeneite des matrices de covariance"
+#| tbl-cap: "Test de Box M pour l'homogénéité des matrices de covariance"
 knitr::kable(
   box_m_test_table,
   format = "latex",
   booktabs = TRUE,
   row.names = FALSE,
   digits = 4,
-  col.names = c("Test", "Statistique", "Degres de liberte", "p-value", "Conclusion")
+  col.names = c("Test", "Statistique", "Degrés de liberté", "p-value", "Conclusion")
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 7
   )
@@ -1188,7 +1706,7 @@ knitr::kable(
   col.names = auc_col_names
 ) |>
   kableExtra::kable_styling(
-    latex_options = c("HOLD_position", "scale_down"),
+    latex_options = c("hold_position", "scale_down"),
     full_width = FALSE,
     font_size = 8
   )
@@ -1197,8 +1715,9 @@ knitr::kable(
 ```{r}
 #| label: fig-grid-auc-discriminante
 #| fig-cap: "AUC de validation selon le nombre d'axes ACM et le modèle"
-#| fig-width: 7.5
-#| fig-height: 4.8
+#| fig-width: 8.2
+#| fig-height: 5.1
+#| out-width: "98%"
 #| fig-pos: "H"
 plot_discriminant_grid_auc
 ```
@@ -1206,8 +1725,9 @@ plot_discriminant_grid_auc
 ```{r}
 #| label: fig-grid-f1-discriminante
 #| fig-cap: "F1-score de validation selon le nombre d'axes ACM et le modèle"
-#| fig-width: 7.5
-#| fig-height: 4.8
+#| fig-width: 8.2
+#| fig-height: 5.1
+#| out-width: "98%"
 #| fig-pos: "H"
 plot_discriminant_grid_f1
 ```

@@ -6,11 +6,12 @@ source("scripts/04-data_preparation.R")
 
 # Methodologie predictive :
 # 1. les bases train / validation / test viennent exclusivement de
-#    scripts/04-data_preparation.R, comme pour l'analyse discriminante ;
+#    scripts/04-data preparation.R, comme pour l'analyse discriminante ;
 # 2. les modeles candidats sont estimes sur train ;
-# 3. le choix du modele et du seuil est fait sur validation ;
-# 4. le modele retenu est reestime sur train + validation ;
-# 5. l'evaluation finale sur test est reservee a scripts/07- Comparaison.R.
+# 3. le modele est choisi sur validation avec des criteres independants du seuil ;
+# 4. le seuil est optimise ensuite uniquement pour le modele retenu ;
+# 5. le modele retenu est reestime sur train + validation ;
+# 6. l'evaluation finale sur test est reservee a scripts/07- Comparaison.R.
 
 # ============================================================
 # 1. BASES ET MATRICES DE DESIGN
@@ -191,6 +192,75 @@ evaluate_logit_model <- function(model, new_data, threshold, scenario) {
   )
 }
 
+
+compute_hosmer_lemeshow <- function(probs, truth_factor, g = 10) {
+  observed <- ifelse(truth_factor == "Oui", 1, 0)
+
+  hl_groups <- tibble(
+    observed = observed,
+    expected = probs,
+    group = dplyr::ntile(probs, g)
+  ) |>
+    group_by(group) |>
+    summarise(
+      n = n(),
+      observed_events = sum(observed),
+      expected_events = sum(expected),
+      observed_nonevents = n - observed_events,
+      expected_nonevents = n - expected_events,
+      .groups = "drop"
+    ) |>
+    mutate(
+      contribution =
+        (observed_events - expected_events)^2 / pmax(expected_events, 1e-12) +
+        (observed_nonevents - expected_nonevents)^2 / pmax(expected_nonevents, 1e-12)
+    )
+
+  statistic <- sum(hl_groups$contribution)
+  degrees_freedom <- nrow(hl_groups) - 2
+
+  list(
+    summary = tibble(
+      test = "Hosmer-Lemeshow",
+      groups = nrow(hl_groups),
+      statistic = statistic,
+      df = degrees_freedom,
+      p_value = pchisq(statistic, df = degrees_freedom, lower.tail = FALSE)
+    ),
+    groups = hl_groups
+  )
+}
+
+compute_brier_score <- function(probs, truth_factor) {
+  observed <- ifelse(truth_factor == "Oui", 1, 0)
+  mean((probs - observed)^2)
+}
+
+summarise_model_selection <- function(model_name, model_type, probs, truth_factor,
+                                      aic_approx, n_coefficients, n_nonzero_coefficients) {
+  roc_obj <- pROC::roc(
+    response = truth_factor,
+    predictor = probs,
+    levels = c("Non", "Oui"),
+    direction = "<",
+    quiet = TRUE
+  )
+  hl <- compute_hosmer_lemeshow(probs, truth_factor)$summary
+
+  tibble(
+    model = model_name,
+    model_type = model_type,
+    sample = "validation",
+    auc = as.numeric(pROC::auc(roc_obj)),
+    brier_score = compute_brier_score(probs, truth_factor),
+    aic_approx = aic_approx,
+    n_coefficients = n_coefficients,
+    n_nonzero_coefficients = n_nonzero_coefficients,
+    hl_statistic = hl$statistic,
+    hl_df = hl$df,
+    hl_p_value = hl$p_value
+  )
+}
 predict_logistic_final <- function(model_object, new_data, newx = NULL) {
   if (model_object$type == "glm") {
     return(as.numeric(
@@ -314,6 +384,21 @@ glm_validation_metrics <- purrr::map_dfr(
   \(x) x$validation_eval$metrics
 )
 
+glm_model_selection_metrics <- purrr::map_dfr(
+  glm_candidate_objects,
+  \(x) {
+    summarise_model_selection(
+      model_name = x$model,
+      model_type = "glm_selection",
+      probs = x$validation_eval$probabilities,
+      truth_factor = logistic_validation$is_canceled,
+      aic_approx = AIC(x$fit),
+      n_coefficients = length(coef(x$fit)),
+      n_nonzero_coefficients = sum(coef(x$fit) != 0)
+    )
+  }
+)
+
 glm_coefficients_all <- purrr::imap_dfr(
   glm_fits,
   \(fit, model_name) {
@@ -331,6 +416,21 @@ glm_selected_terms <- glm_coefficients_all |>
     importance = abs(log(estimate))
   ) |>
   arrange(model, desc(importance))
+
+glm_full_importance <- glm_selected_terms |>
+  filter(model == "glm_full") |>
+  transmute(
+    model,
+    model_type,
+    original_variable,
+    term,
+    odds_ratio = estimate,
+    std.error,
+    statistic,
+    p.value,
+    importance
+  ) |>
+  arrange(desc(importance))
 
 # ============================================================
 # 4. MODELES PENALISES : RIDGE, LASSO, ELASTIC NET
@@ -522,10 +622,28 @@ penalized_aic_table <- purrr::map_dfr(
 ) |>
   arrange(aic_approx)
 
+penalized_model_selection_metrics <- purrr::map_dfr(
+  penalized_fits,
+  \(x) {
+    coefficients <- as.numeric(coef(x$fit, s = "lambda.1se"))
+    summarise_model_selection(
+      model_name = x$model,
+      model_type = "penalized",
+      probs = x$validation_eval$probabilities,
+      truth_factor = logistic_validation$is_canceled,
+      aic_approx = penalized_aic_table$aic_approx[match(x$model, penalized_aic_table$model)],
+      n_coefficients = length(coefficients),
+      n_nonzero_coefficients = sum(coefficients != 0)
+    )
+  }
+)
+
 # ============================================================
-# 5. COMPARAISON DES CANDIDATS SUR VALIDATION
+# 5. COMPARAISON DES CANDIDATS ET CHOIX DU SEUIL
 # ============================================================
 
+# Table descriptive avec les seuils optimaux de chaque modele. Elle sert
+# au diagnostic, mais pas au choix principal du modele.
 logistic_validation_metrics <- bind_rows(
   glm_validation_metrics,
   penalized_validation_metrics
@@ -563,12 +681,19 @@ logistic_aic_table <- bind_rows(
 ) |>
   arrange(aic_approx)
 
-best_logistic_choice <- logistic_validation_metrics |>
-  filter(model=='lasso')########ici slice(1) si on veut garder le meilleur en f1 score
+# Le choix du modele est separe du choix du seuil : AUC, Brier score,
+# AIC/AIC approx. et Hosmer-Lemeshow evaluent les probabilites predites.
+logistic_model_selection_metrics <- bind_rows(
+  glm_model_selection_metrics,
+  penalized_model_selection_metrics
+) |>
+  arrange(desc(auc), brier_score, aic_approx, hl_statistic, n_nonzero_coefficients)
+
+best_logistic_choice <- logistic_model_selection_metrics |>
+  slice(1)
 
 best_logistic_model_name <- best_logistic_choice$model
 best_logistic_model_type <- best_logistic_choice$model_type
-best_logistic_threshold <- best_logistic_choice$threshold
 
 if (best_logistic_model_type == "glm_selection") {
   best_logistic_train_object <- glm_candidate_objects[[best_logistic_model_name]]
@@ -576,22 +701,56 @@ if (best_logistic_model_type == "glm_selection") {
   best_logistic_train_object <- penalized_fits[[best_logistic_model_name]]
 }
 
+# Le seuil est optimise uniquement apres le choix du modele retenu.
 threshold <- best_logistic_train_object$threshold_choice
 threshold_table <- threshold$all
+best_logistic_threshold <- threshold$best_f1$threshold
+
+logit_validation_probabilities <- best_logistic_train_object$validation_eval$probabilities
+
+logit_validation_roc <- pROC::roc(
+  response = logistic_validation$is_canceled,
+  predictor = logit_validation_probabilities,
+  levels = c("Non", "Oui"),
+  direction = "<",
+  quiet = TRUE
+)
+
+logit_validation_roc_curve <- pROC::coords(
+  logit_validation_roc,
+  x = "all",
+  ret = c("specificity", "sensitivity", "threshold"),
+  transpose = FALSE
+) |>
+  as_tibble() |>
+  mutate(
+    false_positive_rate = 1 - specificity,
+    true_positive_rate = sensitivity
+  )
+
+logit_hosmer_lemeshow <- compute_hosmer_lemeshow(
+  probs = logit_validation_probabilities,
+  truth_factor = logistic_validation$is_canceled,
+  g = 10
+)
+
+logit_hosmer_lemeshow_summary <- logit_hosmer_lemeshow$summary
+logit_hosmer_lemeshow_groups <- logit_hosmer_lemeshow$groups
 
 logistic_models_recap <- tibble(
   selected_model = best_logistic_model_name,
   selected_model_type = best_logistic_model_type,
   selected_threshold = best_logistic_threshold,
-  selection_sample = "validation",
+  model_selection_sample = "validation",
+  threshold_selection_sample = "validation",
   final_training_sample = "train + validation",
   final_test_role = "evaluation finale dans scripts/07- Comparaison.R"
 )
 
+logistic_model_selection_metrics
 logistic_validation_metrics
 logistic_aic_table
 logistic_models_recap
-
 # ============================================================
 # 6. MODELE FINAL REESTIME SUR TRAIN + VALIDATION
 # ============================================================

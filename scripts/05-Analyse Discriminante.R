@@ -4,15 +4,15 @@ source("scripts/04-data_preparation.R")
 # ANALYSE DISCRIMINANTE SUR AXES D'ACM
 # ============================================================
 
-# Methodologie predictive :
-# 1. selection : ACM estimee sur train uniquement, validation/test en
-#    individus supplementaires ;
-# 2. choix du nombre d'axes et du modele LDA/QDA/KNN sur validation
-#    avec l'AUC, independante du seuil ;
-# 3. optimisation du seuil seulement pour le modele retenu ;
-# 4. modele final : ACM reestimee sur train + validation, test projete
-#    en individu supplementaire ;
-# 5. le test final est evalue dans scripts/07- Comparaison.R.
+# Méthodologie prédictive :
+# 1. sélection : ACM estimée sur train uniquement, validation/test en
+#    individus supplémentaires ;
+# 2. choix du nombre d'axes et du modèle LDA/QDA/KNN sur validation
+#    avec l'AUC, indépendante du seuil ;
+# 3. optimisation du seuil seulement pour le modèle retenu ;
+# 4. modèle final : ACM réestimée sur train + validation, test projeté
+#    en individu supplémentaire ;
+# 5. le test final est évalué dans scripts/07- Comparaison.R.
 
 # ============================================================
 # 1. HARMONISATION DES FACTEURS
@@ -21,8 +21,8 @@ source("scripts/04-data_preparation.R")
 active_vars <- names(df_model)[sapply(df_model, is.factor)]
 active_vars <- setdiff(active_vars, "is_canceled")
 
-# Les niveaux de reference sont pris sur train pour eviter d'utiliser
-# la structure de validation/test dans la preparation du modele.
+# Les niveaux de référence sont pris sur train pour éviter d'utiliser
+# la structure de validation/test dans la préparation du modèle.
 train_levels <- lapply(
   train |>
     dplyr::select(all_of(c(active_vars, "is_canceled"))),
@@ -267,7 +267,7 @@ fit_discriminant_for_k <- function(k) {
         precision = NA_real_,
         f1_score = NA_real_,
         balanced_accuracy = NA_real_,
-        status = paste("QDA non estimee:", e$message)
+        status = paste("QDA non estimée :", e$message)
       )
     }
   )
@@ -419,7 +419,7 @@ interpret_mca_axes <- function(res_mca, active_data, active_vars, n_axes = 5, to
     mutate(
       modality_label = if_else(
         modality %in% duplicated_raw_modalities,
-        paste0(original_variable, " = ", modality_value, " (modalite partagee)"),
+        paste0(original_variable, " = ", modality_value, " (modalité partagée)"),
         paste0(original_variable, " = ", modality_value)
       )
     ) |>
@@ -531,11 +531,11 @@ interpret_mca_axes <- function(res_mca, active_data, active_vars, n_axes = 5, to
         axis = axis_name,
         interpretation = paste0(
           axis_name,
-          " oppose surtout les modalites a coordonnees negatives (",
+          " oppose surtout les modalités à coordonnées négatives (",
           paste(negative_modalities$modality_label[seq_len(min(3, nrow(negative_modalities)))], collapse = ", "),
-          ") aux modalites a coordonnees positives (",
+          ") aux modalités à coordonnées positives (",
           paste(positive_modalities$modality_label[seq_len(min(3, nrow(positive_modalities)))], collapse = ", "),
-          "). Les modalites les plus contributives sont : ",
+          "). Les modalités les plus contributives sont : ",
           paste(top_contributions$modality_label[seq_len(min(5, nrow(top_contributions)))], collapse = ", "),
           "."
         ),
@@ -671,7 +671,7 @@ plot_mca_modalities_labeled <- function(
     coord_cartesian(clip = "off") +
     labs(
       title = paste0("Plan factoriel ", dims[1], "-", dims[2]),
-      subtitle = "Modalites actives labellisees par variable d'origine et cible projetee",
+      subtitle = "Modalités actives labellisées par variable d'origine et cible projetée",
       x = dim_names[1],
       y = dim_names[2],
       size = "Contribution au plan"
@@ -694,7 +694,7 @@ plot_mca_modalities_labeled_34
 # Grid search allegee :
 # - les premiers axes sont testes finement ;
 # - quelques valeurs plus grandes permettent de verifier si ajouter
-#   davantage d'information factorielle ameliore la prediction.
+#   davantage d'information factorielle améliore la prédiction.
 axis_grid <- unique(
   pmin(
     c(1, 2, 3, 4, 5, 7, 10, 15, 20,26)
@@ -703,7 +703,7 @@ axis_grid <- unique(
   )
 )
 
-# KNN est tres couteux : on garde une grille courte et interpretable.
+# KNN est très coûteux : on garde une grille courte et interprétable.
 knn_k_grid <- c(5, 15, 26)
 knn_k_grid <- knn_k_grid[knn_k_grid < nrow(train_coord)]
 
@@ -712,7 +712,7 @@ knn_k_grid <- knn_k_grid[knn_k_grid < nrow(train_coord)]
 # ============================================================
 
 # Ces tests documentent les hypotheses classiques de LDA/QDA.
-# Ils sont places juste apres la construction des axes ACM et avant
+# Ils sont placés juste après la construction des axes ACM et avant
 # la grid search. A ce stade, le nombre d'axes final n'est pas encore
 # choisi ; on teste donc les axes candidats jusqu'au maximum explore
 # dans la grille de recherche.
@@ -740,8 +740,8 @@ shapiro_axes_results <- purrr::map_dfr(
       p_value = test$p.value,
       conclusion = if_else(
         p_value < 0.05,
-        "Normalite rejetee",
-        "Normalite non rejetee"
+        "Normalité rejetée",
+        "Normalité non rejetée"
       )
     )
   }
@@ -759,8 +759,8 @@ box_m_test_table <- tibble(
   p_value = box_m_test$p.value,
   conclusion = if_else(
     p_value < 0.05,
-    "Homogeneite des covariances rejetee",
-    "Homogeneite des covariances non rejetee"
+    "Homogénéité des covariances rejetée",
+    "Homogénéité des covariances non rejetée"
   )
 )
 
@@ -775,8 +775,8 @@ mardia_test_table <- tryCatch(
       as_tibble() |>
       mutate(conclusion = if_else(
         p.value < 0.05,
-        "Normalite multivariee rejetee",
-        "Normalite multivariee non rejetee"
+        "Normalité multivariée rejetée",
+        "Normalité multivariée non rejetée"
       ))
   },
   error = function(e) {
@@ -784,9 +784,9 @@ mardia_test_table <- tryCatch(
       Test = "Mardia",
       Statistic = NA_real_,
       p.value = NA_real_,
-      Method = "non calcule",
+      Method = "non calculé",
       MVN = e$message,
-      conclusion = "Test non calcule"
+      conclusion = "Test non calculé"
     )
   }
 )
@@ -802,8 +802,8 @@ henze_zirkler_test_table <- tryCatch(
       as_tibble() |>
       mutate(conclusion = if_else(
         p.value < 0.05,
-        "Normalite multivariee rejetee",
-        "Normalite multivariee non rejetee"
+        "Normalité multivariée rejetée",
+        "Normalité multivariée non rejetée"
       ))
   },
   error = function(e) {
@@ -811,9 +811,9 @@ henze_zirkler_test_table <- tryCatch(
       Test = "Henze-Zirkler",
       Statistic = NA_real_,
       p.value = NA_real_,
-      Method = "non calcule",
+      Method = "non calculé",
       MVN = e$message,
-      conclusion = "Test non calcule"
+      conclusion = "Test non calculé"
     )
   }
 )
@@ -877,8 +877,8 @@ best_discriminant_choice_by_auc <- results_validation |>
   arrange(desc(auc), desc(f1_score), desc(sensitivity_recall)) |>
   slice(1)
 
-# Le maximum d'AUC est conserve comme point de comparaison. Le modele retenu
-# privilegie ensuite la parcimonie lorsque la perte d'AUC reste marginale.
+# Le maximum d'AUC est conservé comme point de comparaison. Le modèle retenu
+# privilégie ensuite la parcimonie lorsque la perte d'AUC reste marginale.
 selected_discriminant_model <- "ACM + KNN"
 selected_discriminant_n_axes <- 15
 selected_discriminant_knn_k <- 15
@@ -894,8 +894,8 @@ best_discriminant_choice <- results_validation |>
 
 if (nrow(best_discriminant_choice) == 0) {
   stop(
-    "Le modele discriminant parcimonieux demande n'est pas present dans results_validation. ",
-    "Verifier axis_grid et knn_k_grid."
+    "Le modèle discriminant parcimonieux demandé n'est pas présent dans results_validation. ",
+    "Vérifier axis_grid et knn_k_grid."
   )
 }
 
@@ -924,7 +924,7 @@ auc_gain_marginal_table <- results_validation |>
       n_axes < best_discriminant_n_axes ~ "Gain encore utile",
       n_axes == best_discriminant_n_axes ~ "Choix retenu",
       n_axes > best_discriminant_n_axes & gap_to_best <= 0.01 ~ "Gain marginal faible",
-      TRUE ~ "Gain a discuter"
+      TRUE ~ "Gain à discuter"
     )
   ) |>
   dplyr::select(
@@ -1018,32 +1018,59 @@ threshold_discriminant$best_balanced
 
 plot_discriminant_grid_auc <- results_validation |>
   filter(!is.na(auc)) |>
-  mutate(model_grid = if_else(
-    model == "ACM + KNN",
-    paste0(model, " k=", knn_k),
-    model
-  )) |>
+  mutate(
+    model_grid = case_when(
+      model == "ACM + KNN" ~ paste0("KNN k=", knn_k),
+      model == "ACM + LDA" ~ "LDA",
+      model == "ACM + QDA" ~ "QDA",
+      TRUE ~ model
+    ),
+    model_grid = factor(
+      model_grid,
+      levels = c("LDA", "QDA", "KNN k=5", "KNN k=15", "KNN k=26")
+    )
+  ) |>
   ggplot(aes(x = n_axes, y = auc, color = model_grid)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
   scale_x_continuous(breaks = axis_grid) +
   labs(
     title = "Choix du nombre d'axes ACM",
-    subtitle = "Selection sur validation",
+    subtitle = "Sélection sur validation",
     x = "Nombre d'axes ACM",
     y = "AUC validation",
-    color = "Modele"
+    color = "Modèle"
   ) +
   theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom")
+  guides(
+    color = guide_legend(
+      nrow = 2,
+      byrow = TRUE,
+      title.position = "left"
+    )
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 9, face = "bold"),
+    legend.text = element_text(size = 8),
+    legend.key.width = grid::unit(0.9, "cm"),
+    legend.spacing.x = grid::unit(0.18, "cm")
+  )
 
 plot_discriminant_grid_f1 <- results_validation |>
   filter(!is.na(f1_score)) |>
-  mutate(model_grid = if_else(
-    model == "ACM + KNN",
-    paste0(model, " k=", knn_k),
-    model
-  )) |>
+  mutate(
+    model_grid = case_when(
+      model == "ACM + KNN" ~ paste0("KNN k=", knn_k),
+      model == "ACM + LDA" ~ "LDA",
+      model == "ACM + QDA" ~ "QDA",
+      TRUE ~ model
+    ),
+    model_grid = factor(
+      model_grid,
+      levels = c("LDA", "QDA", "KNN k=5", "KNN k=15", "KNN k=26")
+    )
+  ) |>
   ggplot(aes(x = n_axes, y = f1_score, color = model_grid)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
@@ -1053,10 +1080,23 @@ plot_discriminant_grid_f1 <- results_validation |>
     subtitle = "F1-score sur validation",
     x = "Nombre d'axes ACM",
     y = "F1-score validation",
-    color = "Modele"
+    color = "Modèle"
   ) +
   theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom")
+  guides(
+    color = guide_legend(
+      nrow = 2,
+      byrow = TRUE,
+      title.position = "left"
+    )
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 9, face = "bold"),
+    legend.text = element_text(size = 8),
+    legend.key.width = grid::unit(0.9, "cm"),
+    legend.spacing.x = grid::unit(0.18, "cm")
+  )
 
 plot_discriminant_grid_auc
 plot_discriminant_grid_f1
@@ -1137,7 +1177,7 @@ discriminant_method_recap <- tibble(
   max_knn_k_tested = max(knn_k_grid),
   selection_sample = "validation",
   final_acm_active_sample = "train + validation",
-  final_test_role = "individu supplementaire"
+  final_test_role = "individu supplémentaire"
 )
 
 discriminant_method_recap

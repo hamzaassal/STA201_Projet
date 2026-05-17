@@ -6,8 +6,8 @@ if (!exists("df_engineered")) {
   source("scripts/02-data_engenering.R")
 }
 
-# Les variables retenues sont centralisees ici afin que la base de
-# modelisation et le tableau du rapport reposent sur la meme definition.
+# Les variables retenues sont centralisées ici afin que la base de
+# modélisation et le tableau du rapport reposent sur la même définition.
 variables_modelisation <- c(
   "is_canceled",
   "hotel",
@@ -30,13 +30,13 @@ variables_modelisation <- c(
 roles_modelisation_specifiques <- tibble::tribble(
   ~Variable, ~Role_dans_l_analyse,
   "hotel", "Distinguer City Hotel et Resort Hotel",
-  "market_segment", "Caracteriser le canal commercial de reservation",
-  "customer_type", "Distinguer les profils de clients selon le type de reservation"
+  "market_segment", "Caractériser le canal commercial de réservation",
+  "customer_type", "Distinguer les profils de clients selon le type de réservation"
 )
 
-# La subdivision train / validation / test est centralisee ici.
-# Les scripts de modelisation sourcent ce fichier afin d'utiliser
-# exactement les memes observations et d'eviter toute fuite de donnees.
+# La subdivision train / validation / test est centralisée ici.
+# Les scripts de modélisation sourcent ce fichier afin d'utiliser
+# exactement les mêmes observations et d'éviter toute fuite de données.
 df_model <- df_engineered |>
   dplyr::select(dplyr::all_of(variables_modelisation)) |>
   tidyr::drop_na()
@@ -71,7 +71,7 @@ extraire_role <- function(var_name) {
 
 table_variables_modelisation <- tibble::tibble(
   Variable = variables_modelisation,
-  Modalite = purrr::map_chr(variables_modelisation, extraire_modalites),
+  Modalité = purrr::map_chr(variables_modelisation, extraire_modalites),
   Role_dans_l_analyse = purrr::map_chr(variables_modelisation, extraire_role)
 )
 

@@ -119,7 +119,7 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
     mutate(
       prop = n / sum(n),
       label = dplyr::if_else(
-        prop >= 0.06,
+        prop >= 0.12,
         percent(prop, accuracy = 0.1),
         ""
       )
@@ -130,7 +130,8 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
     group_by(variable) |>
     summarise(total_n = sum(n), .groups = "drop") |>
     mutate(
-      total_prop = total_n / sum(total_n)
+      total_prop = total_n / sum(total_n),
+      total_label = percent(total_prop, accuracy = 0.1)
     )
   
   variable_levels <- total_data |>
@@ -144,32 +145,27 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
   total_data <- total_data |>
     mutate(variable_ordered = factor(as.character(variable), levels = variable_levels))
   
-  plot_data |>
-    ggplot(
-      aes(
-        x = variable_ordered,
-        y = prop,
-        fill = is_canceled
-      )
-    ) +
+  distribution_plot <- plot_data |>
+    ggplot(aes(x = variable_ordered, y = prop, fill = is_canceled)) +
     geom_col(position = "fill", width = 0.68, alpha = 0.95) +
     geom_text(
       aes(label = label),
       position = position_fill(vjust = 0.5),
-      size = 2.9,
+      size = 2.55,
       fontface = "bold",
       color = "white"
     ) +
-    coord_flip(clip = "off") +
+    coord_flip() +
     scale_fill_manual(values = c("Non" = "#1F77B4", "Oui" = "#E76F51")) +
     scale_y_continuous(
       labels = percent_format(),
-      limits = c(0, 1.03),
+      breaks = c(0, 0.25, 0.50, 0.75, 1.00),
+      limits = c(0, 1),
       expand = expansion(mult = c(0, 0.02))
     ) +
     labs(
       title = title_label,
-      subtitle = "Répartition annulé / non annulé",
+      subtitle = "Répartition Non/Oui par modalité",
       x = NULL,
       y = "Proportion",
       fill = "Annulation"
@@ -177,15 +173,58 @@ plot_bivariate <- function(data, var_name, title_label = NULL) {
     theme_report +
     theme(
       plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
-      plot.subtitle = element_text(size = 8, hjust = 0.5, color = "grey35"),
+      plot.subtitle = element_text(size = 7.5, hjust = 0.5, color = "grey35"),
       axis.title.x = element_text(size = 10, face = "bold"),
       axis.text.x = element_text(size = 8),
       axis.text.y = element_text(size = 8),
       legend.position = "bottom",
       legend.title = element_text(size = 9, face = "bold"),
       legend.text = element_text(size = 8),
-      plot.margin = margin(5, 8, 5, 5)
+      plot.margin = margin(5, 6, 5, 5)
     )
+
+  modality_share_plot <- total_data |>
+    ggplot(aes(x = variable_ordered, y = total_prop)) +
+    geom_col(width = 0.52, fill = "grey72", alpha = 0.95) +
+    geom_text(
+      aes(
+        y = pmin(total_prop + 0.035, 1.08),
+        label = total_label
+      ),
+      hjust = 0,
+      size = 2.35,
+      fontface = "bold",
+      color = "grey15"
+    ) +
+    coord_flip(clip = "off") +
+    scale_y_continuous(
+      limits = c(0, 1.18),
+      breaks = numeric(0),
+      minor_breaks = NULL,
+      labels = NULL,
+      expand = expansion(mult = c(0, 0.02))
+    ) +
+    labs(
+      title = "Part",
+      subtitle = "de la modalité",
+      x = NULL,
+      y = NULL
+    ) +
+    theme_void(base_size = 10) +
+    theme(
+      plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 7.2, hjust = 0.5, color = "grey35"),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title = element_blank(),
+      axis.line = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none",
+      plot.margin = margin(5, 18, 5, 0)
+    )
+
+  distribution_plot + modality_share_plot +
+    plot_layout(widths = c(4.6, 1.35))
 }
 
 plot_cancel_rate <- function(data, var_name, title_label = NULL) {

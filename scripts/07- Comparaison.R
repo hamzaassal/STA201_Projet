@@ -67,7 +67,7 @@ logit_test_eval <- evaluate_logistic_probabilities(
   truth_factor = logistic_test$is_canceled,
   threshold = logit_final_model$threshold,
   model_name = paste0(
-    "Regression logistique - ",
+    "Régression logistique - ",
     logit_final_model$model
   ),
   model_type = logit_final_model$type,
